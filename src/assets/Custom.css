@@ -1,0 +1,58 @@
+@layer base {
+    code,
+    pre {
+        @apply select-text!;
+    }
+    img {
+        @apply pointer-events-none;
+    }
+    body {
+        @apply bg-background text-foreground;
+    }
+
+    ::-webkit-scrollbar {
+        background: var(--color-accent);
+        width: 10px;
+    }
+    ::-webkit-scrollbar-thumb {
+        background: var(--color-primary);
+        border: 2px solid var(--color-accent);
+    }
+}
+
+/* Page Transition Animations */
+@media (prefers-reduced-motion: no-preference) {
+    ::view-transition-old(root) {
+        animation: fade-out 250ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    }
+
+    ::view-transition-new(root) {
+        animation: fade-in 250ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    ::view-transition-old(root),
+    ::view-transition-new(root) {
+        animation-duration: 0.01ms;
+    }
+}
+
+@layer components {
+    li.cn-toast[data-type="info"],
+    li.cn-toast[data-type="info"] [data-description] {
+        @apply text-sky-600! dark:text-sky-500!;
+    }
+    li.cn-toast[data-type="success"],
+    li.cn-toast[data-type="success"] [data-description] {
+        @apply text-green-600! dark:text-green-500!;
+    }
+    li.cn-toast[data-type="warning"],
+    li.cn-toast[data-type="warning"] [data-description] {
+        @apply text-yellow-600! dark:text-yellow-500!;
+    }
+    li.cn-toast[data-type="error"],
+    li.cn-toast[data-type="error"] [data-description] {
+        @apply text-destructive!;
+    }
+}

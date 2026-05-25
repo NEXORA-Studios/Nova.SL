@@ -1,0 +1,61 @@
+@theme inline {
+    --color-log-debug: var(--log-debug);
+    --color-log-info: var(--log-info);
+    --color-log-warn: var(--log-warn);
+    --color-log-error: var(--log-error);
+    --color-log-fatal: var(--log-fatal);
+
+    --color-log-debug-bg: var(--log-debug-bg);
+    --color-log-info-bg: var(--log-info-bg);
+    --color-log-warn-bg: var(--log-warn-bg);
+    --color-log-error-bg: var(--log-error-bg);
+    --color-log-fatal-bg: var(--log-fatal-bg);
+
+    --color-log-debug-border: var(--log-debug-border);
+    --color-log-info-border: var(--log-info-border);
+    --color-log-warn-border: var(--log-warn-border);
+    --color-log-error-border: var(--log-error-border);
+    --color-log-fatal-border: var(--log-fatal-border);
+}
+
+:root {
+    /* Light */
+    --log-debug: oklch(0.45 0.02 255);
+    --log-info: oklch(0.52 0.16 245);
+    --log-warn: oklch(0.62 0.15 92);
+    --log-error: oklch(0.54 0.2 28);
+    --log-fatal: oklch(0.42 0.22 18);
+
+    --log-debug-bg: oklch(0.97 0.002 255);
+    --log-info-bg: oklch(0.96 0.02 245);
+    --log-warn-bg: oklch(0.97 0.03 92);
+    --log-error-bg: oklch(0.96 0.03 28);
+    --log-fatal-bg: oklch(0.94 0.04 18);
+
+    --log-debug-border: oklch(0.82 0.01 255);
+    --log-info-border: oklch(0.78 0.05 245);
+    --log-warn-border: oklch(0.82 0.07 92);
+    --log-error-border: oklch(0.75 0.09 28);
+    --log-fatal-border: oklch(0.68 0.1 18);
+}
+
+.dark {
+    /* Dark */
+    --log-debug: oklch(0.7 0.02 255);
+    --log-info: oklch(0.72 0.14 245);
+    --log-warn: oklch(0.84 0.16 92);
+    --log-error: oklch(0.68 0.22 28);
+    --log-fatal: oklch(0.52 0.24 18);
+
+    --log-debug-bg: oklch(0.22 0.01 255);
+    --log-info-bg: oklch(0.24 0.03 245);
+    --log-warn-bg: oklch(0.26 0.04 92);
+    --log-error-bg: oklch(0.24 0.05 28);
+    --log-fatal-bg: oklch(0.18 0.06 18);
+
+    --log-debug-border: oklch(0.38 0.02 255);
+    --log-info-border: oklch(0.45 0.08 245);
+    --log-warn-border: oklch(0.5 0.1 92);
+    --log-error-border: oklch(0.46 0.12 28);
+    --log-fatal-border: oklch(0.4 0.14 18);
+}
