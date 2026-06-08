@@ -1,4 +1,4 @@
-import { cn } from "@/lib/utils";
+import { cn } from "@/utils/utils";
 import { Button } from "@/components/ui/button";
 import { CopyIcon, Trash2Icon } from "lucide-react";
 
@@ -24,4 +24,3 @@ function TerminalToolbar({ onClear, onCopy, className }: TerminalToolbarProps) {
 }
 
 export { TerminalToolbar };
-

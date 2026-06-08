@@ -1,0 +1,20 @@
+- [x] `src-tauri/src/core/instance/download/modrinth/cache.rs` 已创建，包含 `CacheEntry`、`ModrinthCache` 结构体及 `get`/`set`/`clear`/`make_key` 方法
+- [x] `src-tauri/src/core/app/config/mod.rs` 中已添加 `CacheConfig` 结构体，包含各 API 端点的 `ttl_seconds` 字段及默认值
+- [x] `AppConfig` 已新增 `modrinth_cache: CacheConfig` 字段，且使用 `#[serde(default)]` 保证向后兼容
+- [x] `ModrinthClient` 已新增 `cache` 和 `cache_config` 字段，且 `new()` 方法已接受 `AppHandle` 初始化缓存
+- [x] `search_projects` 方法已集成缓存逻辑（使用 `search` TTL）
+- [x] `get_project` 方法已集成缓存逻辑（使用 `project` TTL）
+- [x] `get_project_versions` 方法已集成缓存逻辑（使用 `project_versions` TTL）
+- [x] `get_version` 方法已集成缓存逻辑（使用 `version` TTL）
+- [x] `get_version_from_hash` 方法已集成缓存逻辑（使用 `version_from_hash` TTL）
+- [x] `get_versions` 方法已集成缓存逻辑（使用 `versions` TTL）
+- [x] `get_categories` 方法已集成缓存逻辑（使用 `categories` TTL）
+- [x] `get_loaders` 方法已集成缓存逻辑（使用 `loaders` TTL）
+- [x] `get_game_versions` 方法已集成缓存逻辑（使用 `game_versions` TTL）
+- [x] `download_file` 方法未添加缓存逻辑
+- [x] `src-tauri/src/core/instance/download/modrinth/mod.rs` 已添加 `pub mod cache;`
+- [x] `command/modrinth.rs` 中各命令已使用 `app_handle` 初始化 `ModrinthClient`
+- [x] `command/modrinth.rs` 中已新增 `clear_modrinth_cache` 命令
+- [x] `lib.rs` 的 `invoke_handler` 中已注册 `clear_modrinth_cache` 命令
+- [x] `cargo check` 通过无编译错误
+- [x] `cargo fmt` 已执行

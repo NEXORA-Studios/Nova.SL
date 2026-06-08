@@ -7,7 +7,6 @@ import {
     PlusIcon,
     PuzzleIcon,
     ServerIcon,
-    Settings2Icon,
     SettingsIcon,
     TerminalIcon,
     ZapIcon,
@@ -16,10 +15,11 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { IsCurrentPathOptions, useIsCurrentPath } from "@/hooks/use-is-current-path";
-import { cn } from "@/lib/utils";
+import { cn } from "@/utils/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useLocation, useNavigate } from "react-router";
 import { useConfigStore } from "@/stores/config";
+import { isModServer, isPluginServer } from "@/lib/server-type";
 
 interface SidebarGroupProps {
     title?: string;
@@ -87,9 +87,20 @@ function Sidebar({ className }: SidebarProps) {
     const servers = config?.server.instances ?? [];
     const hasServers = servers.length > 0;
 
+    // 获取当前服务器的 loader 信息
+    const currentServerInfo = servers.find((s) => s.id === currentServer);
+    const currentLoader = currentServerInfo?.loader;
+    const showModButton = isModServer(currentLoader);
+    const showPluginButton = isPluginServer(currentLoader);
+    // TODO: MCDR 检测需要从后端获取实例配置
+    const showMcdrButton = false;
+
     return (
         <aside
-            className={cn("flex h-screen w-[15%] shrink-0 flex-col border-r border-sidebar-border bg-sidebar p-4", className)}>
+            className={cn(
+                "sticky top-0 flex h-screen w-[15%] shrink-0 flex-col border-r border-sidebar-border bg-sidebar p-4",
+                className
+            )}>
             <SidebarGroup>
                 <Button size="lg" className="justify-start" variant={_isCurrentButton("/")} onClick={() => navigate("/")}>
                     <HomeIcon className="mr-2" size={24} />
@@ -129,19 +140,43 @@ function Sidebar({ className }: SidebarProps) {
                     <FolderIcon className="mr-2" size={24} />
                     文件管理
                 </Button>
-                <Button
-                    size="lg"
-                    className="justify-start"
-                    variant={_isCurrentButton({ path: "/server/instance/*/configs**", mode: "wildcard" })}
-                    disabled={!hasServers}
-                    onClick={() => navigate(`/server/instance/${currentServer}/configs`)}>
-                    <Settings2Icon className="mr-2" size={24} />
-                    配置文件
-                </Button>
+                {showModButton && (
+                    <Button
+                        size="lg"
+                        className="justify-start"
+                        variant={_isCurrentButton({ path: "/resource/mods", mode: "wildcard" })}
+                        disabled={!hasServers}
+                        onClick={() => navigate(`/resource/mods`)}>
+                        <PuzzleIcon className="mr-2" size={24} />
+                        模组
+                    </Button>
+                )}
+                {showPluginButton && (
+                    <Button
+                        size="lg"
+                        className="justify-start"
+                        variant={_isCurrentButton({ path: "/resource/plugins", mode: "wildcard" })}
+                        disabled={!hasServers}
+                        onClick={() => navigate(`/resource/plugins`)}>
+                        <CableIcon className="mr-2" size={24} />
+                        插件
+                    </Button>
+                )}
+                {showMcdrButton && (
+                    <Button
+                        size="lg"
+                        className="justify-start"
+                        variant={_isCurrentButton({ path: "/resource/mcdr-plugins", mode: "wildcard" })}
+                        disabled={!hasServers}
+                        onClick={() => navigate(`/resource/mcdr-plugins`)}>
+                        <ZapIcon className="mr-2" size={24} />
+                        MCDR 扩展
+                    </Button>
+                )}
                 <div className="flex w-full items-center gap-2">
                     <Button
                         size="lg"
-                        className="justify-start flex-1"
+                        className="flex-1 justify-start"
                         variant={_isCurrentButton({ path: "/server/instance/*/settings", mode: "wildcard" })}
                         disabled={!hasServers}
                         onClick={() => navigate(`/server/instance/${currentServer}/settings`)}>
@@ -218,4 +253,3 @@ function Sidebar({ className }: SidebarProps) {
 }
 
 export { Sidebar };
-

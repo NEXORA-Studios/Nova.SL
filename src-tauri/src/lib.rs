@@ -1,4 +1,3 @@
-use std::sync::Mutex;
 use tauri::Manager;
 
 mod command;
@@ -21,13 +20,14 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_shell::init())
         .setup(|app| {
             log::info!("Tauri app setup started");
 
             // 初始化加载配置
             let initial_config = core::app::config::load(app.handle()).unwrap_or_default();
             app.manage(command::config::ConfigState {
-                config: Mutex::new(initial_config),
+                config: std::sync::Mutex::new(initial_config),
             });
 
             // 初始化进程管理器
@@ -38,6 +38,18 @@ pub fn run() {
             // 初始化下载插件注册表
             let registry = core::instance::download::plugin::create_default_registry();
             app.manage(DownloadRegistryState { registry });
+
+            // 异步启动 Agent 侧车进程（完全 Detach，GUI 关闭后继续运行）
+            let app_clone = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                let sidecar = core::instance::agent::SidecarManager::new();
+                match sidecar.spawn(&app_clone).await {
+                    Ok(()) => log::info!("Agent sidecar started successfully"),
+                    Err(e) => {
+                        log::error!("Failed to start Agent sidecar: {}", e);
+                    }
+                }
+            });
 
             Ok(())
         })
@@ -61,6 +73,11 @@ pub fn run() {
             command::instance::create_server_instance,
             command::instance::get_launch_config,
             command::instance::update_launch_config,
+            command::instance::get_server_properties,
+            command::instance::get_server_properties_keys,
+            command::instance::read_server_properties,
+            command::instance::write_server_properties,
+            command::instance::update_server_settings,
             command::instance::get_instance_status,
             command::instance::start_instance,
             command::instance::stop_instance,
@@ -96,7 +113,20 @@ pub fn run() {
             command::file::write_raw,
             command::file::write_raw_validated,
             command::file::read_nbt,
+            command::modrinth::search_mods,
+            command::modrinth::get_modrinth_project,
+            command::modrinth::get_modrinth_versions,
+            command::modrinth::get_modrinth_version,
+            command::modrinth::download_mod_to_instance,
+            command::modrinth::get_modrinth_categories,
+            command::modrinth::get_modrinth_loaders,
+            command::modrinth::get_modrinth_game_versions,
+            command::modrinth::get_modrinth_version_from_hash,
+            command::modrinth::clear_modrinth_cache,
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application")
+        .run(|_app, _event| {
+            // Agent 已 Detach，不需要在退出时做任何清理
+        });
 }

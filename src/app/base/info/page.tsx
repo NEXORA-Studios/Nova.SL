@@ -15,8 +15,8 @@ function InfoPage() {
             <Card>
                 <CardHeader>
                     <div className="flex items-center gap-4">
-                        <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-primary/10 text-2xl font-bold text-primary">
-                            NS
+                        <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-xl">
+                            <img src="/logo.png" alt="Nova.SL" className="size-16" />
                         </div>
                         <div>
                             <CardTitle className="text-xl">Nova.SL</CardTitle>

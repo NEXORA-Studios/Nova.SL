@@ -126,4 +126,3 @@ function GeneralSettings() {
 }
 
 export { GeneralSettings };
-

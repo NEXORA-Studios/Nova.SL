@@ -14,21 +14,15 @@ import {
     CoffeeIcon,
     PuzzleIcon,
     CheckCircleIcon,
-    AlertCircleIcon,
 } from "lucide-react";
-import {
-    pickServerDirectory,
-    analyzeServerDirectory,
-    importInstance,
-    type ImportAnalysis,
-} from "@/lib/tauri/server-import";
+import { toast } from "sonner";
+import { pickServerDirectory, analyzeServerDirectory, importInstance, type ImportAnalysis } from "@/lib/tauri/server-import";
 
 function ImportServerPage() {
     const navigate = useNavigate();
     const [selectedPath, setSelectedPath] = useState("");
     const [analyzing, setAnalyzing] = useState(false);
     const [analysis, setAnalysis] = useState<ImportAnalysis | null>(null);
-    const [error, setError] = useState("");
     const [importing, setImporting] = useState(false);
 
     const handlePickDirectory = async () => {
@@ -37,22 +31,20 @@ function ImportServerPage() {
             if (path) {
                 setSelectedPath(path);
                 setAnalysis(null);
-                setError("");
             }
         } catch (err) {
-            setError(`选择文件夹失败: ${err}`);
+            toast.error(`选择文件夹失败: ${err}`);
         }
     };
 
     const handleAnalyze = async () => {
         if (!selectedPath) return;
         setAnalyzing(true);
-        setError("");
         try {
             const result = await analyzeServerDirectory(selectedPath);
             setAnalysis(result);
         } catch (err) {
-            setError(`分析失败: ${err}`);
+            toast.error(`分析失败: ${err}`);
         } finally {
             setAnalyzing(false);
         }
@@ -61,15 +53,9 @@ function ImportServerPage() {
     const handleImport = async () => {
         if (!analysis) return;
         setImporting(true);
-        setError("");
         const name = analysis.server_name || "Imported Server";
         try {
-            const id = await importInstance(
-                analysis.instance_path,
-                name,
-                analysis.loader,
-                analysis.version ?? ""
-            );
+            const id = await importInstance(analysis.instance_path, name, analysis.loader, analysis.version ?? "");
             navigate(`/server/new/init/${id}`, {
                 state: {
                     name,
@@ -80,7 +66,7 @@ function ImportServerPage() {
                 },
             });
         } catch (err) {
-            setError(`导入失败: ${err}`);
+            toast.error(`导入失败: ${err}`);
         } finally {
             setImporting(false);
         }
@@ -104,16 +90,14 @@ function ImportServerPage() {
     };
 
     return (
-        <div className="flex flex-col gap-6 max-w-2xl mx-auto">
+        <div className="mx-auto flex max-w-2xl flex-col gap-6">
             <div className="flex items-center gap-2">
                 <Button variant="ghost" size="icon-sm" onClick={() => navigate(-1)}>
                     <ArrowLeftIcon className="size-4" />
                 </Button>
                 <div>
                     <h1 className="text-2xl font-bold">导入已有服务器</h1>
-                    <p className="text-sm text-muted-foreground">
-                        选择本地服务器目录，Nova.SL 将自动识别配置
-                    </p>
+                    <p className="text-sm text-muted-foreground">选择本地服务器目录，Nova.SL 将自动识别配置</p>
                 </div>
             </div>
 
@@ -121,46 +105,22 @@ function ImportServerPage() {
             <Card>
                 <CardHeader>
                     <CardTitle className="text-base">步骤 1：选择服务器目录</CardTitle>
-                    <CardDescription>
-                        选择包含服务器核心 jar 和启动脚本的文件夹
-                    </CardDescription>
+                    <CardDescription>选择包含服务器核心 jar 和启动脚本的文件夹</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className="flex items-center gap-2">
-                        <Input
-                            value={selectedPath}
-                            readOnly
-                            placeholder="点击右侧按钮选择文件夹..."
-                            className="flex-1"
-                        />
-                        <Button
-                            variant="outline"
-                            onClick={handlePickDirectory}
-                            disabled={analyzing}>
+                        <Input value={selectedPath} readOnly placeholder="点击右侧按钮选择文件夹..." className="flex-1" />
+                        <Button variant="outline" onClick={handlePickDirectory} disabled={analyzing}>
                             <FolderOpenIcon className="mr-1 size-4" />
                             浏览
                         </Button>
                     </div>
 
                     {selectedPath && (
-                        <Button
-                            onClick={handleAnalyze}
-                            disabled={analyzing}
-                            className="w-full">
-                            <SearchIcon
-                                className={
-                                    "mr-1 size-4 " + (analyzing ? "animate-spin" : "")
-                                }
-                            />
+                        <Button onClick={handleAnalyze} disabled={analyzing} className="w-full">
+                            <SearchIcon className={"mr-1 size-4 " + (analyzing ? "animate-spin" : "")} />
                             {analyzing ? "正在分析..." : "分析服务器"}
                         </Button>
-                    )}
-
-                    {error && (
-                        <div className="flex items-center gap-2 rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
-                            <AlertCircleIcon className="size-4 shrink-0" />
-                            {error}
-                        </div>
                     )}
                 </CardContent>
             </Card>
@@ -172,9 +132,7 @@ function ImportServerPage() {
                         <div className="flex items-center justify-between">
                             <div>
                                 <CardTitle className="text-base">步骤 2：识别结果</CardTitle>
-                                <CardDescription>
-                                    已自动识别服务器配置，请确认后导入
-                                </CardDescription>
+                                <CardDescription>已自动识别服务器配置，请确认后导入</CardDescription>
                             </div>
                             <CheckCircleIcon className="size-5 text-primary" />
                         </div>
@@ -189,9 +147,7 @@ function ImportServerPage() {
                                     <ServerIcon className="size-3" />
                                     核心类型
                                 </div>
-                                <Badge variant="default">
-                                    {loaderLabels[analysis.loader] ?? analysis.loader}
-                                </Badge>
+                                <Badge variant="default">{loaderLabels[analysis.loader] ?? analysis.loader}</Badge>
                             </div>
 
                             <div className="space-y-1">
@@ -199,11 +155,7 @@ function ImportServerPage() {
                                     <PuzzleIcon className="size-3" />
                                     模组类型
                                 </div>
-                                <Badge variant="outline">
-                                    {analysis.mod_type === "none"
-                                        ? "无模组"
-                                        : analysis.mod_type}
-                                </Badge>
+                                <Badge variant="outline">{analysis.mod_type === "none" ? "无模组" : analysis.mod_type}</Badge>
                             </div>
 
                             <div className="space-y-1">
@@ -211,9 +163,7 @@ function ImportServerPage() {
                                     <FileCodeIcon className="size-3" />
                                     游戏版本
                                 </div>
-                                <p className="text-sm font-medium">
-                                    {analysis.version ?? "未识别"}
-                                </p>
+                                <p className="text-sm font-medium">{analysis.version ?? "未识别"}</p>
                             </div>
 
                             <div className="space-y-1">
@@ -222,9 +172,7 @@ function ImportServerPage() {
                                     Java
                                 </div>
                                 <p className="text-sm font-medium">
-                                    {analysis.suggested_java
-                                        ? "自动选择"
-                                        : analysis.detected_java ?? "未识别"}
+                                    {analysis.suggested_java ? "自动选择" : (analysis.detected_java ?? "未识别")}
                                 </p>
                             </div>
                         </div>
@@ -234,22 +182,17 @@ function ImportServerPage() {
                             <>
                                 <Separator />
                                 <div className="space-y-2">
-                                    <p className="text-xs text-muted-foreground">
-                                        启动脚本
-                                    </p>
-                                    <div className="rounded-lg bg-muted p-3 space-y-1">
-                                        <p className="text-xs font-mono truncate">
-                                            {analysis.launch_script.path}
-                                        </p>
+                                    <p className="text-xs text-muted-foreground">启动脚本</p>
+                                    <div className="space-y-1 rounded-lg bg-muted p-3">
+                                        <p className="truncate font-mono text-xs">{analysis.launch_script.path}</p>
                                         {analysis.launch_script.server_jar && (
                                             <p className="text-xs text-muted-foreground">
                                                 核心: {analysis.launch_script.server_jar}
                                             </p>
                                         )}
                                         {analysis.launch_script.java_args.length > 0 && (
-                                            <p className="text-xs text-muted-foreground truncate">
-                                                参数:{" "}
-                                                {analysis.launch_script.java_args.join(" ")}
+                                            <p className="truncate text-xs text-muted-foreground">
+                                                参数: {analysis.launch_script.java_args.join(" ")}
                                             </p>
                                         )}
                                     </div>
@@ -257,10 +200,7 @@ function ImportServerPage() {
                             </>
                         )}
 
-                        <Button
-                            onClick={handleImport}
-                            disabled={importing || !analysis}
-                            className="w-full">
+                        <Button onClick={handleImport} disabled={importing || !analysis} className="w-full">
                             {importing ? "正在导入..." : "确认导入"}
                         </Button>
                     </CardContent>

@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 
 function NotFound() {
     return (
-        <div className="flex flex-1 flex-col items-center justify-center gap-6 p-8 w-full h-full">
+        <div className="flex h-full w-full flex-1 flex-col items-center justify-center gap-6 p-8">
             <div className="relative">
                 <span className="text-[8rem] leading-none font-black tracking-tighter text-muted-foreground/20 select-none">
                     404

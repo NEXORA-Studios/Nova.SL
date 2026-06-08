@@ -5,9 +5,7 @@ import { TauriBridge } from "@/models";
 export type JavaInstallation = TauriBridge.Java.JavaInstallation;
 export type JavaConfig = TauriBridge.Java.JavaConfig;
 
-export async function scanJavaInstallations(
-    customPaths?: string[]
-): Promise<void> {
+export async function scanJavaInstallations(customPaths?: string[]): Promise<void> {
     return invoke<void>("scan_java_installations", { customPaths });
 }
 
@@ -23,22 +21,15 @@ export async function getJavaConfig(): Promise<JavaConfig> {
     return invoke<JavaConfig>("get_java_config");
 }
 
-export async function updateJavaEnabled(
-    path: string,
-    enabled: boolean
-): Promise<void> {
+export async function updateJavaEnabled(path: string, enabled: boolean): Promise<void> {
     return invoke<void>("update_java_enabled", { path, enabled });
 }
 
-export async function addManualJava(
-    installation: JavaInstallation
-): Promise<void> {
+export async function addManualJava(installation: JavaInstallation): Promise<void> {
     return invoke<void>("add_manual_java", { installation });
 }
 
-export async function onJavaScanEvent(
-    handler: (event: TauriBridge.Java.ScanEvent) => void
-): Promise<UnlistenFn> {
+export async function onJavaScanEvent(handler: (event: TauriBridge.Java.ScanEvent) => void): Promise<UnlistenFn> {
     return listen<TauriBridge.Java.ScanEvent>("java-scan-event", (event) => {
         handler(event.payload);
     });

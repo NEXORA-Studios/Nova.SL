@@ -12,4 +12,3 @@ export async function getConfig(): Promise<AppConfig> {
 export async function updateConfig(config: AppConfig): Promise<void> {
     return invoke<void>("update_config", { config });
 }
-

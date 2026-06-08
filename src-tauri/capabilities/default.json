@@ -3,5 +3,27 @@
     "identifier": "default",
     "description": "Capability for the main window",
     "windows": ["main"],
-    "permissions": ["core:default", "opener:default", "dialog:default"]
+    "permissions": [
+        "core:default",
+        "opener:default",
+        "dialog:default",
+        {
+            "identifier": "shell:allow-spawn",
+            "allow": [
+                {
+                    "name": "sidecar/nova-agent",
+                    "sidecar": true
+                }
+            ]
+        },
+        {
+            "identifier": "shell:allow-execute",
+            "allow": [
+                {
+                    "name": "sidecar/nova-agent",
+                    "sidecar": true
+                }
+            ]
+        }
+    ]
 }

@@ -1,52 +1,49 @@
 use std::collections::HashMap;
-use std::process::Stdio;
+use std::io::{BufRead, BufReader, Write};
 use std::sync::Arc;
-use tokio::io::AsyncWriteExt;
-use tokio::process::Command;
-use tokio::sync::RwLock;
+use tauri::Emitter;
+use tokio::sync::Mutex;
+use tokio::task::JoinHandle;
 
 use super::error::ProcessError;
-use super::process::ManagedProcess;
+use super::events::OutputEvent;
 use super::status::ProcessStatus;
-use super::tasks::{self, CleanupCallback};
+use crate::core::instance::agent;
+use interprocess::local_socket::traits::Stream;
+use interprocess::local_socket::ToNsName;
 
-/// 进程管理器：只负责索引，不执行 IO
-/// 使用 RwLock 允许多个并发读，提高并发性能
+/// 进程管理器 - 通过 Named Pipe 代理到 Agent 侧车
 pub struct ProcessManager {
-    processes: Arc<RwLock<HashMap<String, Arc<ManagedProcess>>>>,
+    /// 每个实例的 SubscribeConsole 后台任务句柄
+    subscription_handles: Arc<Mutex<HashMap<String, JoinHandle<()>>>>,
 }
 
 impl ProcessManager {
     pub fn new() -> Self {
         Self {
-            processes: Arc::new(RwLock::new(HashMap::new())),
+            subscription_handles: Arc::new(Mutex::new(HashMap::new())),
         }
     }
 
-    /// 获取进程状态（只读锁，允许多个并发）
+    /// 查询实例状态
     pub async fn get_status(&self, instance_id: &str) -> Option<ProcessStatus> {
-        let map = self.processes.read().await;
-        if let Some(proc) = map.get(instance_id) {
-            Some(proc.get_status().await)
-        } else {
-            None
+        let req = agent::AgentRequest::GetState {
+            id: instance_id.to_string(),
+        };
+        match agent::send_request(&req).await {
+            Ok(resp) => match agent::check_response(resp) {
+                Ok(agent::AgentResponseData::InstanceState(instance_state)) => {
+                    Some(status_from_agent(&instance_state))
+                }
+                _ => None,
+            },
+            Err(e) => {
+                log::warn!("[process] get_status: agent error: {}", e);
+                None
+            }
         }
     }
 
-    /// 获取进程 Ring Buffer（只读锁，允许多个并发）
-    pub async fn get_ring_buffer(
-        &self,
-        instance_id: &str,
-    ) -> Option<Vec<super::events::OutputEvent>> {
-        let map = self.processes.read().await;
-        if let Some(proc) = map.get(instance_id) {
-            Some(proc.get_ring_buffer().await)
-        } else {
-            None
-        }
-    }
-
-    /// 启动实例进程
     pub async fn start(
         &self,
         instance_id: String,
@@ -55,265 +52,306 @@ impl ProcessManager {
         java_args: Vec<String>,
         server_jar: String,
         server_args: Vec<String>,
-        app_handle: tauri::AppHandle,
+        app: tauri::AppHandle,
     ) -> Result<(), ProcessError> {
         log::info!(
-            "[process] start: id={}, working_dir={}, java_path={}, server_jar={}",
-            instance_id, working_dir, java_path, server_jar
+            "[process] start (agent): requested id={}, working_dir={}, java_path={}",
+            instance_id,
+            working_dir,
+            java_path
         );
 
-        // 先检查是否已存在（读锁）
-        {
-            let map = self.processes.read().await;
-            if map.contains_key(&instance_id) {
-                log::warn!("[process] start: id={} already running", instance_id);
-                return Err(ProcessError::AlreadyRunning);
+        let req = agent::AgentRequest::CreateInstance {
+            java_path,
+            jvm_args: java_args,
+            jar_path: server_jar,
+            program_args: server_args,
+            working_dir: Some(working_dir.clone()),
+            id: Some(instance_id.clone()),
+        };
+
+        let resp = agent::send_request(&req).await.map_err(|e| {
+            log::error!("[process] start: send_request failed: {}", e);
+            ProcessError::Other(e)
+        })?;
+
+        // CreateInstance 返回 OkData(InstanceId)，需要提取实际使用的 id
+        let actual_instance_id = match agent::check_response(resp) {
+            Ok(agent::AgentResponseData::InstanceId(returned_id)) => {
+                if returned_id != instance_id {
+                    log::warn!(
+                        "[process] start: agent returned different instance id: requested={}, returned={}",
+                        instance_id, returned_id
+                    );
+                }
+                returned_id
             }
-        }
-        // 注意：这里释放读锁后，理论上可能有竞态条件
-        // 但在实际场景中，同一实例不会并发启动多次，所以可以接受
-        // 如果需要严格保证，可以在 spawn 后检查 insert 的返回值
+            Ok(_) => {
+                log::error!("[process] start: unexpected response type from CreateInstance");
+                return Err(ProcessError::Other(
+                    "Unexpected response from Agent".to_string(),
+                ));
+            }
+            Err(e) => {
+                log::error!("[process] start: agent returned error: {}", e);
+                return Err(ProcessError::Other(e));
+            }
+        };
 
-        let mut cmd = Command::new(&java_path);
-        cmd.current_dir(&working_dir)
-            .args(&java_args)
-            .arg("-jar")
-            .arg(&server_jar)
-            .args(&server_args)
-            .stdin(Stdio::piped())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .kill_on_drop(true);
-
-        log::info!("[process] start: spawning command: {:?}", cmd);
-
-        let mut child = cmd.spawn().map_err(|e| {
-            log::error!("[process] start: spawn failed: {}", e);
-            ProcessError::Io(e)
-        })?;
-
-        let pid = child.id().ok_or_else(|| {
-            log::error!("[process] start: failed to get pid");
-            ProcessError::Other("无法获取进程 ID".to_string())
-        })?;
-        log::info!("[process] start: child spawned, pid={}", pid);
-
-        let stdin = child
-            .stdin
-            .take()
-            .ok_or_else(|| {
-                log::error!("[process] start: failed to take stdin");
-                ProcessError::Other("无法获取 stdin".to_string())
-            })?;
-
-        let process = Arc::new(
-            ManagedProcess::new(
-                instance_id.clone(),
-                pid,
-                stdin,
-                child,
-                std::path::Path::new(&working_dir),
-            )
-            .await
-            .map_err(|e| {
-                log::error!("[process] start: failed to create stream logger: {}", e);
-                ProcessError::Io(e)
-            })?,
+        log::info!(
+            "[process] start: instance {} created in agent",
+            actual_instance_id
         );
 
-        // 创建清理回调，在进程退出时从索引中移除
-        let processes_clone = self.processes.clone();
-        let instance_id_clone = instance_id.clone();
-        let cleanup: CleanupCallback = Box::new(move || {
-            let processes = processes_clone.clone();
-            let id = instance_id_clone.clone();
-            tokio::spawn(async move {
-                tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
-                let mut map = processes.write().await;
-                map.remove(&id);
-                log::info!("[process] removed from index: id={}", id);
-            })
-        });
+        // 启动 SubscribeConsole 后台任务（使用 Agent 返回的实际 id）
+        let handle = subscribe_console_task(actual_instance_id.clone(), app.clone());
+        {
+            let mut handles = self.subscription_handles.lock().await;
+            handles.insert(actual_instance_id.clone(), handle);
+        }
 
-        // 启动后台任务
-        tasks::spawn_all(process.clone(), app_handle.clone(), cleanup).await;
-
-        // 插入索引（写锁）
-        let mut map = self.processes.write().await;
-        map.insert(instance_id.clone(), process.clone());
-        drop(map);
-
-        // 设置状态并发送事件
-        process.set_status(ProcessStatus::Running).await;
-        process.emit_lifecycle(&app_handle, "started");
-        process.emit_status(&app_handle).await;
-
-        log::info!("[process] start: id={} completed", instance_id);
+        log::info!(
+            "[process] start: subscribe task started for {}",
+            actual_instance_id
+        );
         Ok(())
     }
 
-    /// 安全停止：向 stdin 发送 "stop" 并等待进程退出
     pub async fn stop(&self, instance_id: &str) -> Result<(), ProcessError> {
-        log::info!("[process] stop: id={}", instance_id);
+        log::info!("[process] stop (agent): id={}", instance_id);
 
-        let proc = {
-            let map = self.processes.read().await;
-            map.get(instance_id)
-                .cloned()
-                .ok_or_else(|| {
-                    log::warn!("[process] stop: id={} not running", instance_id);
-                    ProcessError::NotRunning
-                })?
+        let req = agent::AgentRequest::StopInstance {
+            id: instance_id.to_string(),
+        };
+        let resp = agent::send_request(&req).await.map_err(|e| {
+            log::error!("[process] stop: send_request failed: {}", e);
+            ProcessError::Other(e)
+        })?;
+        agent::check_ok(resp).map_err(|e| {
+            log::error!("[process] stop: agent returned error: {}", e);
+            ProcessError::Other(e)
+        })?;
+        log::info!("[process] stop: instance {} stop requested", instance_id);
+        Ok(())
+    }
+
+    pub async fn kill(&self, instance_id: &str) -> Result<(), ProcessError> {
+        log::info!("[process] kill (agent): id={}", instance_id);
+
+        let req = agent::AgentRequest::KillInstance {
+            id: instance_id.to_string(),
+        };
+        let resp = agent::send_request(&req).await.map_err(|e| {
+            log::error!("[process] kill: send_request failed: {}", e);
+            ProcessError::Other(e)
+        })?;
+        agent::check_ok(resp).map_err(|e| {
+            log::error!("[process] kill: agent returned error: {}", e);
+            ProcessError::Other(e)
+        })?;
+        log::info!("[process] kill: instance {} killed", instance_id);
+        Ok(())
+    }
+
+    pub async fn send_command(&self, instance_id: &str, command: &str) -> Result<(), ProcessError> {
+        log::debug!(
+            "[process] send_command (agent): id={}, command={}",
+            instance_id,
+            command
+        );
+        let req = agent::AgentRequest::SendConsole {
+            id: instance_id.to_string(),
+            line: command.to_string(),
+        };
+        let resp = agent::send_request(&req).await.map_err(|e| {
+            log::error!("[process] send_command: send_request failed: {}", e);
+            ProcessError::Other(e)
+        })?;
+        agent::check_ok(resp).map_err(|e| {
+            log::error!("[process] send_command: agent returned error: {}", e);
+            ProcessError::Other(e)
+        })?;
+        Ok(())
+    }
+
+    pub async fn get_ring_buffer(&self, instance_id: &str) -> Option<Vec<OutputEvent>> {
+        let req = agent::AgentRequest::GetBacklog {
+            id: instance_id.to_string(),
+        };
+        match agent::send_request(&req).await {
+            Ok(resp) => match agent::check_response(resp) {
+                Ok(agent::AgentResponseData::Backlog(backlog)) => {
+                    let events: Vec<OutputEvent> = backlog
+                        .into_iter()
+                        .map(|cl| OutputEvent {
+                            stream: cl.stream,
+                            line: cl.line,
+                            timestamp: cl.timestamp.to_string(),
+                        })
+                        .collect();
+                    Some(events)
+                }
+                _ => None,
+            },
+            Err(e) => {
+                log::warn!("[process] get_backlog: agent error: {}", e);
+                None
+            }
+        }
+    }
+
+    /// 取消指定实例的订阅
+    pub async fn unsubscribe(&self, instance_id: &str) {
+        let mut handles = self.subscription_handles.lock().await;
+        if let Some(handle) = handles.remove(instance_id) {
+            handle.abort();
+            log::info!("[process] unsubscribe: cancelled for {}", instance_id);
+        }
+    }
+}
+
+/// SubscribeConsole 后台任务
+/// 连接到 Agent，订阅控制台输出，将输出发射为 Tauri 事件
+fn subscribe_console_task(instance_id: String, app: tauri::AppHandle) -> JoinHandle<()> {
+    tokio::spawn(async move {
+        log::info!("[console-sub] starting for {}", instance_id);
+
+        // 连接到 Agent Pipe，发送 SubscribeConsole
+        let name = match "nova-agent".to_ns_name::<interprocess::local_socket::GenericNamespaced>()
+        {
+            Ok(n) => n,
+            Err(e) => {
+                log::error!(
+                    "[console-sub] create name failed for {}: {}",
+                    instance_id,
+                    e
+                );
+                return;
+            }
         };
 
-        let status = proc.get_status().await;
-        if !matches!(status, ProcessStatus::Running) {
-            log::warn!("[process] stop: id={} status is not running", instance_id);
-            return Err(ProcessError::NotRunning);
+        let mut conn = match interprocess::local_socket::Stream::connect(name) {
+            Ok(c) => c,
+            Err(e) => {
+                log::error!("[console-sub] connect failed for {}: {}", instance_id, e);
+                return;
+            }
+        };
+
+        let req = agent::AgentRequest::SubscribeConsole {
+            id: instance_id.clone(),
+        };
+        let json = match serde_json::to_string(&req) {
+            Ok(j) => j,
+            Err(e) => {
+                log::error!("[console-sub] serialize failed: {}", e);
+                return;
+            }
+        };
+
+        if let Err(e) = conn.write_all(format!("{}\n", json).as_bytes()) {
+            log::error!("[console-sub] write failed: {}", e);
+            return;
+        }
+        if let Err(e) = conn.flush() {
+            log::error!("[console-sub] flush failed: {}", e);
+            return;
         }
 
-        proc.set_status(ProcessStatus::Stopping).await;
-        log::info!("[process] stop: id={} status set to Stopping", instance_id);
-
-        {
-            let mut stdin = proc.stdin.lock().await;
-            stdin
-                .write_all(b"stop\n")
-                .await
-                .map_err(|e| {
-                    log::error!("[process] stop: write to stdin failed: {}", e);
-                    ProcessError::Io(e)
-                })?;
-            stdin.flush().await.map_err(|e| {
-                log::error!("[process] stop: flush stdin failed: {}", e);
-                ProcessError::Io(e)
-            })?;
-        }
-
-        // 写入 stdin 日志
-        proc.stream_logger.log_stdin("stop").await;
-
-        log::info!("[process] stop: 'stop' command sent to id={}", instance_id);
-
-        // 等待进程退出（30秒超时）
-        let timeout = tokio::time::Duration::from_secs(30);
-        let wait_result = tokio::time::timeout(timeout, async {
-            loop {
-                let status = proc.get_status().await;
-                if matches!(status, ProcessStatus::Stopped | ProcessStatus::Crashed) {
+        let mut reader = BufReader::new(&conn);
+        loop {
+            let mut line = String::new();
+            match reader.read_line(&mut line) {
+                Ok(0) => {
+                    log::info!("[console-sub] stream ended for {}", instance_id);
                     break;
                 }
-                tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+                Ok(_) => {
+                    let trimmed = line.trim();
+                    if trimmed.is_empty() {
+                        continue;
+                    }
+
+                    match serde_json::from_str::<agent::AgentResponse>(trimmed) {
+                        Ok(agent::AgentResponse::OkData(agent::AgentResponseData::Backlog(
+                            backlog,
+                        ))) => {
+                            for cl in backlog {
+                                let event = OutputEvent {
+                                    stream: cl.stream.clone(),
+                                    line: cl.line.clone(),
+                                    timestamp: cl.timestamp.to_string(),
+                                };
+                                let _ =
+                                    app.emit(&format!("instance://{}/output", instance_id), event);
+                            }
+                        }
+                        Ok(agent::AgentResponse::OkData(
+                            agent::AgentResponseData::ConsoleLine(console_line),
+                        )) => {
+                            let event = OutputEvent {
+                                stream: console_line.stream.clone(),
+                                line: console_line.line.clone(),
+                                timestamp: console_line.timestamp.to_string(),
+                            };
+                            let _ = app.emit(&format!("instance://{}/output", instance_id), event);
+                        }
+                        Ok(agent::AgentResponse::OkData(
+                            agent::AgentResponseData::InstanceState(instance_state),
+                        )) => {
+                            // 状态变更通知（Agent 在进程退出时推送）
+                            let status = status_from_agent(&instance_state);
+                            let _ = app.emit(
+                                &format!("instance://{}/status", instance_id),
+                                super::events::StatusEvent {
+                                    status: status.to_string(),
+                                    instance_id: instance_id.clone(),
+                                    timestamp: super::events::now_iso(),
+                                },
+                            );
+                            let _ = app.emit(
+                                &format!("instance://{}/lifecycle", instance_id),
+                                super::events::LifecycleEvent {
+                                    event: instance_state,
+                                    instance_id: instance_id.clone(),
+                                    timestamp: super::events::now_iso(),
+                                },
+                            );
+
+                            // 如果进程结束，关闭自身上下文
+                            if matches!(status, ProcessStatus::Stopped | ProcessStatus::Crashed) {
+                                log::info!(
+                                    "[console-sub] process ended for {}, ending subscription",
+                                    instance_id
+                                );
+                                break;
+                            }
+                        }
+                        Ok(_) => {}
+                        Err(e) => {
+                            log::warn!("[console-sub] parse error: {} (line: {})", e, trimmed);
+                        }
+                    }
+                }
+                Err(e) => {
+                    log::error!("[console-sub] read error for {}: {}", instance_id, e);
+                    break;
+                }
             }
-        })
-        .await;
-
-        if wait_result.is_err() {
-            log::warn!("[process] stop: id={} timeout after 30s, forcing kill", instance_id);
-            let _ = self.kill(instance_id).await;
         }
 
-        Ok(())
-    }
+        log::info!("[console-sub] ended for {}", instance_id);
+    })
+}
 
-    /// 强制关闭进程
-    pub async fn kill(&self, instance_id: &str) -> Result<(), ProcessError> {
-        log::info!("[process] kill: id={}", instance_id);
-
-        let proc = {
-            let map = self.processes.read().await;
-            map.get(instance_id)
-                .cloned()
-                .ok_or_else(|| {
-                    log::warn!("[process] kill: id={} not running", instance_id);
-                    ProcessError::NotRunning
-                })?
-        };
-
-        let pid = proc.pid;
-
-        // 先尝试 graceful kill
-        log::info!(
-            "[process] kill: attempting graceful kill for id={}, pid={}",
-            instance_id, pid
-        );
-        {
-            let mut child_lock = proc.child.lock().await;
-            if let Some(ref mut child) = *child_lock {
-                let _ = child.kill().await;
-            }
-        }
-
-        // 跨平台强制终止（Windows 带 /T 杀子进程树）
-        #[cfg(windows)]
-        {
-            log::info!("[process] kill: force kill with taskkill /T /F /PID {}", pid);
-            let _ = Command::new("taskkill")
-                .args(["/T", "/F", "/PID", &pid.to_string()])
-                .output()
-                .await;
-        }
-        #[cfg(unix)]
-        {
-            log::info!("[process] kill: force kill with kill -9 {}", pid);
-            let _ = Command::new("kill")
-                .args(["-9", &pid.to_string()])
-                .output()
-                .await;
-        }
-
-        proc.set_status(ProcessStatus::Stopped).await;
-        log::info!("[process] kill: id={} status set to Stopped", instance_id);
-
-        // 延迟后从索引移除（写锁）
-        tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
-        let mut map = self.processes.write().await;
-        map.remove(instance_id);
-
-        Ok(())
-    }
-
-    /// 向进程 stdin 发送命令
-    pub async fn send_command(
-        &self,
-        instance_id: &str,
-        command: &str,
-    ) -> Result<(), ProcessError> {
-        log::debug!("[process] send_command: id={}, command={}", instance_id, command);
-
-        let proc = {
-            let map = self.processes.read().await;
-            map.get(instance_id)
-                .cloned()
-                .ok_or_else(|| {
-                    log::warn!("[process] send_command: id={} not running", instance_id);
-                    ProcessError::NotRunning
-                })?
-        };
-
-        let status = proc.get_status().await;
-        if !matches!(status, ProcessStatus::Running) {
-            log::warn!("[process] send_command: id={} status is not running", instance_id);
-            return Err(ProcessError::NotRunning);
-        }
-
-        let line = format!("{}\n", command);
-        {
-            let mut stdin = proc.stdin.lock().await;
-            stdin.write_all(line.as_bytes()).await.map_err(|e| {
-                log::error!("[process] send_command: write failed: {}", e);
-                ProcessError::Io(e)
-            })?;
-            stdin.flush().await.map_err(|e| {
-                log::error!("[process] send_command: flush failed: {}", e);
-                ProcessError::Io(e)
-            })?;
-        }
-
-        // 写入 stdin 日志
-        proc.stream_logger.log_stdin(command).await;
-
-        log::debug!("[process] send_command: command sent to id={}", instance_id);
-        Ok(())
+fn status_from_agent(s: &str) -> ProcessStatus {
+    match s {
+        "Starting" => ProcessStatus::Starting,
+        "Running" => ProcessStatus::Running,
+        "Stopping" => ProcessStatus::Stopping,
+        "StoppingTimedOut" => ProcessStatus::Stopping,
+        "Stopped" => ProcessStatus::Stopped,
+        "Crashed" => ProcessStatus::Crashed,
+        _ => ProcessStatus::Unknown,
     }
 }

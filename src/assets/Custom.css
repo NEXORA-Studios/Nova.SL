@@ -20,6 +20,10 @@
     }
 }
 
+:root {
+    overscroll-behavior: none;
+}
+
 /* Page Transition Animations */
 @media (prefers-reduced-motion: no-preference) {
     ::view-transition-old(root) {

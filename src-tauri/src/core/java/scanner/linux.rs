@@ -20,7 +20,10 @@ pub fn scan_alternatives() -> Vec<PathBuf> {
                 if let Some(home) = path.parent().and_then(|p| p.parent()) {
                     let home = home.to_path_buf();
                     if home.exists() {
-                        log::debug!("[java-scanner][linux] alternative found: {}", home.display());
+                        log::debug!(
+                            "[java-scanner][linux] alternative found: {}",
+                            home.display()
+                        );
                         results.push(home);
                     }
                 }
@@ -32,7 +35,10 @@ pub fn scan_alternatives() -> Vec<PathBuf> {
         log::debug!("[java-scanner][linux] update-alternatives command not found or failed");
     }
 
-    log::info!("[java-scanner][linux] alternatives scan found {} installations", results.len());
+    log::info!(
+        "[java-scanner][linux] alternatives scan found {} installations",
+        results.len()
+    );
     results
 }
 
@@ -52,12 +58,18 @@ pub fn scan_common_dirs() -> Vec<PathBuf> {
     for dir in &common_dirs {
         let path = PathBuf::from(dir);
         if path.exists() {
-            log::trace!("[java-scanner][linux] scanning directory: {}", path.display());
+            log::trace!(
+                "[java-scanner][linux] scanning directory: {}",
+                path.display()
+            );
             for entry in WalkDir::new(&path).max_depth(2).into_iter().flatten() {
                 if entry.file_type().is_dir() {
                     let bin = entry.path().join("bin").join("java");
                     if bin.exists() {
-                        log::debug!("[java-scanner][linux] common dir found: {}", entry.path().display());
+                        log::debug!(
+                            "[java-scanner][linux] common dir found: {}",
+                            entry.path().display()
+                        );
                         results.push(entry.path().to_path_buf());
                     }
                 }
@@ -69,26 +81,41 @@ pub fn scan_common_dirs() -> Vec<PathBuf> {
     if let Ok(home) = std::env::var("HOME") {
         let jdks = PathBuf::from(&home).join(".jdks");
         if jdks.exists() {
-            log::trace!("[java-scanner][linux] scanning user .jdks: {}", jdks.display());
+            log::trace!(
+                "[java-scanner][linux] scanning user .jdks: {}",
+                jdks.display()
+            );
             for entry in WalkDir::new(&jdks).max_depth(2).into_iter().flatten() {
                 if entry.file_type().is_dir() {
                     let bin = entry.path().join("bin").join("java");
                     if bin.exists() {
-                        log::debug!("[java-scanner][linux] user .jdks found: {}", entry.path().display());
+                        log::debug!(
+                            "[java-scanner][linux] user .jdks found: {}",
+                            entry.path().display()
+                        );
                         results.push(entry.path().to_path_buf());
                     }
                 }
             }
         }
 
-        let sdkman = PathBuf::from(&home).join(".sdkman").join("candidates").join("java");
+        let sdkman = PathBuf::from(&home)
+            .join(".sdkman")
+            .join("candidates")
+            .join("java");
         if sdkman.exists() {
-            log::trace!("[java-scanner][linux] scanning sdkman candidates: {}", sdkman.display());
+            log::trace!(
+                "[java-scanner][linux] scanning sdkman candidates: {}",
+                sdkman.display()
+            );
             for entry in WalkDir::new(&sdkman).max_depth(2).into_iter().flatten() {
                 if entry.file_type().is_dir() {
                     let bin = entry.path().join("bin").join("java");
                     if bin.exists() {
-                        log::debug!("[java-scanner][linux] sdkman found: {}", entry.path().display());
+                        log::debug!(
+                            "[java-scanner][linux] sdkman found: {}",
+                            entry.path().display()
+                        );
                         results.push(entry.path().to_path_buf());
                     }
                 }
@@ -96,6 +123,9 @@ pub fn scan_common_dirs() -> Vec<PathBuf> {
         }
     }
 
-    log::info!("[java-scanner][linux] common dirs scan found {} installations", results.len());
+    log::info!(
+        "[java-scanner][linux] common dirs scan found {} installations",
+        results.len()
+    );
     results
 }

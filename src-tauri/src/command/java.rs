@@ -6,7 +6,10 @@ pub async fn scan_java_installations(
     app: AppHandle,
     custom_paths: Option<Vec<String>>,
 ) -> Result<(), String> {
-    log::info!("[command] scan_java_installations: custom_paths={:?}", custom_paths);
+    log::info!(
+        "[command] scan_java_installations: custom_paths={:?}",
+        custom_paths
+    );
     let app_clone = app.clone();
 
     tokio::task::spawn_blocking(move || {
@@ -14,11 +17,9 @@ pub async fn scan_java_installations(
             let _ = app_clone.emit("java-scan-event", event);
         };
 
-        if let Err(e) = scanner::scan_java_installations_with_callback(
-            &app,
-            custom_paths,
-            &mut on_event,
-        ) {
+        if let Err(e) =
+            scanner::scan_java_installations_with_callback(&app, custom_paths, &mut on_event)
+        {
             log::error!("[command] scan_java_installations failed: {:?}", e);
             let _ = app.emit(
                 "java-scan-event",
@@ -63,12 +64,12 @@ pub fn get_java_config(app: AppHandle) -> Result<scanner::JavaConfig, String> {
 }
 
 #[tauri::command]
-pub fn update_java_enabled(
-    app: AppHandle,
-    path: String,
-    enabled: bool,
-) -> Result<(), String> {
-    log::info!("[command] update_java_enabled: path={}, enabled={}", path, enabled);
+pub fn update_java_enabled(app: AppHandle, path: String, enabled: bool) -> Result<(), String> {
+    log::info!(
+        "[command] update_java_enabled: path={}, enabled={}",
+        path,
+        enabled
+    );
     scanner::update_java_entry(&app, &path, enabled).map_err(|e| {
         log::error!("[command] update_java_enabled failed: {:?}", e);
         format!("{:?}", e)

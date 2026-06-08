@@ -1,6 +1,6 @@
 import React, { useMemo } from "react";
 import { useLocation } from "react-router";
-import { cn } from "@/lib/utils";
+import { cn } from "@/utils/utils";
 import {
     Breadcrumb,
     BreadcrumbItem,
@@ -32,10 +32,10 @@ const breadcrumbRoutes: BreadcrumbRoute[] = [
     { pattern: "/server/new/*", parent: "/server/*", label: "新建服务器" },
     { pattern: "/server/instance/*/terminal", label: "终端", parent: "/server/*", dynamicSegment: true },
     { pattern: "/server/instance/*/files", label: "文件管理", parent: "/server/*", dynamicSegment: true },
-    { pattern: "/server/instance/*/configs", label: "配置文件", parent: "/server/*", dynamicSegment: true },
     { pattern: "/server/instance/*/settings", label: "设置", parent: "/server/*", dynamicSegment: true },
     { pattern: "/download", label: "资源" },
     { pattern: "/download/mods", label: "模组", parent: "/download" },
+    { pattern: "/download/mods/*", label: "详情", parent: "/download/mods", dynamicSegment: true },
     { pattern: "/download/plugins", label: "插件", parent: "/download" },
     { pattern: "/download/mcdr-plugins", label: "MCDR 插件", parent: "/download" },
     { pattern: "/app", label: "应用" },
@@ -153,4 +153,3 @@ function Topbar({ className }: TopbarProps) {
 }
 
 export { Topbar };
-

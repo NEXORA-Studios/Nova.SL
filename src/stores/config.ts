@@ -10,6 +10,7 @@ interface ConfigState {
     setCustomStartCommand: (command: string) => Promise<void>;
     addInstance: (id: string, name: string, path: string) => Promise<void>;
     removeInstance: (index: number) => Promise<void>;
+    updateInstanceName: (id: string, name: string) => Promise<void>;
 }
 
 export const useConfigStore = create<ConfigState>((set, get) => ({
@@ -80,6 +81,15 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
         if (!config) return;
         const instances = [...config.server.instances];
         instances.splice(index, 1);
+        const updated = { ...config, server: { ...config.server, instances } };
+        await updateConfig(updated);
+        set({ config: updated });
+    },
+
+    async updateInstanceName(id, name) {
+        const { config } = get();
+        if (!config) return;
+        const instances = config.server.instances.map((inst) => (inst.id === id ? { ...inst, name } : inst));
         const updated = { ...config, server: { ...config.server, instances } };
         await updateConfig(updated);
         set({ config: updated });

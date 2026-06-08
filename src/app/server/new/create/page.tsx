@@ -24,7 +24,6 @@ import {
     ArrowLeftIcon,
     ServerIcon,
     DownloadIcon,
-    AlertCircleIcon,
     Loader2Icon,
     ArrowUpDownIcon,
     PackageIcon,
@@ -32,12 +31,13 @@ import {
     SortAscIcon,
     SortDescIcon,
 } from "lucide-react";
+import { toast } from "sonner";
 import { getDownloadableLoaders, getLoaderVersions, getLoaderBuilds, createServerInstance } from "@/lib/tauri/server-create";
 import { BuildInfo, VersionGroup, VersionInfo } from "@/models/tauri/server/create";
 import { pickServerDirectory } from "@/lib/tauri/server-import";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { default as LoaderIcons } from "@/assets/loader.json";
+import { LoaderIcon } from "@/components/launcher/loader-icon";
 import { sortVersionGroupsForCombobox } from "@/lib/mc-version";
 
 interface LoaderOption {
@@ -46,12 +46,6 @@ interface LoaderOption {
 }
 
 type SortOrder = "desc" | "asc";
-
-// 核心类型到图标/颜色的映射（用于截图中的圆形图标）
-const LOADER_META: Record<string, string> = {};
-LoaderIcons.forEach((item) => {
-    LOADER_META[item.name] = item.icon;
-});
 
 function CreateServerPage() {
     const navigate = useNavigate();
@@ -72,8 +66,6 @@ function CreateServerPage() {
     const [instancePath, setInstancePath] = useState<string>("");
     const [creating, setCreating] = useState(false);
 
-    const [error, setError] = useState("");
-
     const sortedVersionGroups = useMemo(() => {
         return sortVersionGroupsForCombobox(versionGroups, versionSortOrder);
     }, [versionGroups, versionSortOrder]);
@@ -91,7 +83,7 @@ function CreateServerPage() {
             .then((data) => {
                 setLoaders(data.map(([id, name]) => ({ id, name })));
             })
-            .catch((err) => setError(`加载 Loader 列表失败: ${err}`));
+            .catch((err) => toast.error(`加载 Loader 列表失败: ${err}`));
     }, []);
 
     // 选择 Loader 后加载版本
@@ -101,14 +93,13 @@ function CreateServerPage() {
         setSelectedBuild(undefined);
         setVersionGroups([]);
         setBuilds([]);
-        setError("");
         setLoadingVersions(true);
 
         try {
             const data = await getLoaderVersions(loaderId);
             setVersionGroups(data);
         } catch (err) {
-            setError(`加载版本列表失败: ${err}`);
+            toast.error(`加载版本列表失败: ${err}`);
         } finally {
             setLoadingVersions(false);
         }
@@ -120,14 +111,12 @@ function CreateServerPage() {
             if (!version) {
                 setSelectedBuild(undefined);
                 setBuilds([]);
-                setError("");
                 return;
             }
 
             setSelectedVersion(version);
             setSelectedBuild(undefined);
             setBuilds([]);
-            setError("");
 
             const needsBuild = ["paper", "purpur"].includes(selectedLoader);
 
@@ -143,7 +132,7 @@ function CreateServerPage() {
                     })[0];
                     setSelectedBuild(latestBuild);
                 } catch (err) {
-                    setError(`加载构建列表失败: ${err}`);
+                    toast.error(`加载构建列表失败: ${err}`);
                 } finally {
                     setLoadingBuilds(false);
                 }
@@ -158,22 +147,20 @@ function CreateServerPage() {
             const path = await pickServerDirectory();
             if (path) {
                 setInstancePath(path);
-                setError("");
             }
         } catch (err) {
-            setError(`选择目录失败: ${err}`);
+            toast.error(`选择目录失败: ${err}`);
         }
     }, []);
 
     // 确认创建
     const handleCreate = useCallback(async () => {
         if (!instancePath || !selectedLoader || !selectedVersion) {
-            setError("请填写完整信息");
+            toast.error("请填写完整信息");
             return;
         }
 
         setCreating(true);
-        setError("");
 
         const folderName = instancePath.split(/[\\/]/).pop() || "Server";
 
@@ -196,7 +183,8 @@ function CreateServerPage() {
                 },
             });
         } catch (err) {
-            setError(`创建服务器失败: ${err}`);
+            const errorMsg = String(err);
+            toast.error(`创建服务器失败: ${errorMsg}`);
         } finally {
             setCreating(false);
         }
@@ -204,7 +192,6 @@ function CreateServerPage() {
 
     const needsBuild = ["paper", "purpur"].includes(selectedLoader);
     const selectedLoaderInfo = loaders.find((l) => l.id === selectedLoader);
-    const SelectedLogo = selectedLoader ? LOADER_META[selectedLoader] : null;
 
     return (
         <div className="flex flex-col gap-6">
@@ -218,14 +205,6 @@ function CreateServerPage() {
                     <p className="text-sm text-muted-foreground">若你已有文件，可从其他入口进入同一套创建向导。</p>
                 </div>
             </div>
-
-            {/* 错误提示 */}
-            {error && (
-                <div className="flex items-center gap-2 rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
-                    <AlertCircleIcon className="size-4 shrink-0" />
-                    {error.replace("Plugin error:", "")}
-                </div>
-            )}
 
             {/* 主卡片：步骤 1-3 */}
             <Card className="border-border/60">
@@ -275,9 +254,9 @@ function CreateServerPage() {
                                 <Select onValueChange={handleSelectLoader} value={selectedLoader}>
                                     <SelectTrigger className="h-10! w-full">
                                         <SelectValue placeholder="选择核心...">
-                                            {selectedLoaderInfo && SelectedLogo && (
+                                            {selectedLoaderInfo && (
                                                 <div className="flex items-center gap-2">
-                                                    <i dangerouslySetInnerHTML={{ __html: SelectedLogo }}></i>
+                                                    <LoaderIcon name={selectedLoader} className="size-4" />
                                                     <span>{selectedLoaderInfo.name}</span>
                                                     <span className="text-xs text-muted-foreground">
                                                         ({sortedVersionGroups.reduce((acc, g) => acc + g.items.length, 0)}
@@ -288,17 +267,14 @@ function CreateServerPage() {
                                         </SelectValue>
                                     </SelectTrigger>
                                     <SelectContent position="popper">
-                                        {loaders.map((loader) => {
-                                            const Logo = LOADER_META[loader.id] ?? <></>;
-                                            return (
-                                                <SelectItem key={loader.id} value={loader.id}>
-                                                    <div className="flex items-center gap-2">
-                                                        <i dangerouslySetInnerHTML={{ __html: Logo }}></i>
-                                                        <span>{loader.name}</span>
-                                                    </div>
-                                                </SelectItem>
-                                            );
-                                        })}
+                                        {loaders.map((loader) => (
+                                            <SelectItem key={loader.id} value={loader.id}>
+                                                <div className="flex items-center gap-2">
+                                                    <LoaderIcon name={loader.id} className="size-4" />
+                                                    <span>{loader.name}</span>
+                                                </div>
+                                            </SelectItem>
+                                        ))}
                                     </SelectContent>
                                 </Select>
                             </div>
@@ -556,4 +532,3 @@ function CreateServerPage() {
 }
 
 export default CreateServerPage;
-

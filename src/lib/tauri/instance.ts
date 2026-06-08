@@ -49,7 +49,7 @@ export async function saveInstancePrelaunchConfig(
     javaTarget: string,
     onlineMode: boolean,
     eulaAgreed: boolean,
-    extraArgs: string[],
+    extraArgs: string[]
 ): Promise<void> {
     return invoke<void>("save_instance_prelaunch_config", {
         instancePath,
@@ -76,3 +76,27 @@ export async function getRecommendedJvmArgs(loader: string, version: string, bui
     return invoke<string[]>("get_recommended_jvm_args", { loader, version, build: build ?? null });
 }
 
+// ==================== server.properties & eula ====================
+
+export async function getServerProperties(instanceDir: string): Promise<TauriBridge.Instance.ServerProperties> {
+    return invoke<TauriBridge.Instance.ServerProperties>("get_server_properties", { instanceDir });
+}
+
+export async function updateServerSettings(instanceDir: string, port: number, onlineMode: boolean): Promise<void> {
+    return invoke<void>("update_server_settings", { instanceDir, port, onlineMode });
+}
+
+export async function getServerPropertiesKeys(instanceDir: string, forceSync?: boolean): Promise<string[]> {
+    return invoke<string[]>("get_server_properties_keys", { instanceDir, forceSync });
+}
+
+export async function readServerProperties(instanceDir: string): Promise<Record<string, string>> {
+    return invoke<Record<string, string>>("read_server_properties", { instanceDir });
+}
+
+export async function writeServerProperties(
+    instanceDir: string,
+    properties: Record<string, string | number | boolean>
+): Promise<void> {
+    return invoke<void>("write_server_properties", { instanceDir, properties });
+}

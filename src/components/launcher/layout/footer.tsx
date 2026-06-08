@@ -7,7 +7,7 @@ function Footer() {
             <span className="mx-0.5">·</span>
             <span className="inline-flex items-center gap-0.5">
                 Made with
-                <HeartIcon className="size-3 mx-px text-destructive fill-destructive" />
+                <HeartIcon className="mx-px size-3 fill-destructive text-destructive" />
                 by NEOXRA Studios
             </span>
         </footer>

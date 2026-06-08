@@ -24,7 +24,7 @@ export type ServerLoader =
 
 export type ModType = "none" | "forge" | "fabric" | "quilt" | "neoforge" | "mixed";
 
-export interface ImportAnalysis {   
+export interface ImportAnalysis {
     instance_path: string;
     server_name: string;
     launch_script?: LaunchScript;

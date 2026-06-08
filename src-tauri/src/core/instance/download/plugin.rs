@@ -112,10 +112,7 @@ pub trait LoaderPlugin: Send + Sync {
 
     /// 获取指定版本的可用构建列表
     /// 默认返回空列表（不需要选择构建的 Loader 可不实现）
-    async fn get_builds_from_version(
-        &self,
-        _version: &str,
-    ) -> Result<Vec<BuildInfo>, PluginError> {
+    async fn get_builds_from_version(&self, _version: &str) -> Result<Vec<BuildInfo>, PluginError> {
         Ok(Vec::new())
     }
 
@@ -175,7 +172,11 @@ impl PluginRegistry {
         let info = plugin.get_loader_info();
         let id = info.id.clone();
         self.plugins.insert(id, Arc::new(plugin));
-        log::info!("[plugin-registry] registered loader: {} ({})", info.id, info.name);
+        log::info!(
+            "[plugin-registry] registered loader: {} ({})",
+            info.id,
+            info.name
+        );
     }
 
     /// 获取指定 ID 的插件
@@ -185,10 +186,7 @@ impl PluginRegistry {
 
     /// 获取所有已注册的 Loader 信息
     pub fn get_all_loaders(&self) -> Vec<LoaderInfo> {
-        self.plugins
-            .values()
-            .map(|p| p.get_loader_info())
-            .collect()
+        self.plugins.values().map(|p| p.get_loader_info()).collect()
     }
 
     /// 获取所有已注册的 Loader ID-名称映射
@@ -223,15 +221,10 @@ pub fn create_default_registry() -> PluginRegistry {
     let mut registry = PluginRegistry::new();
 
     // 注册所有内置 Loader 插件
-    // registry.register(super::plugins::vanilla::VanillaPlugin);
-    // registry.register(super::plugins::forge::ForgePlugin);
-    // registry.register(super::plugins::neoforge::NeoForgePlugin);
-    // registry.register(super::plugins::fabric::FabricPlugin);
-    // registry.register(super::plugins::quilt::QuiltPlugin);
-    // registry.register(super::plugins::spigot::SpigotPlugin);
-    registry.register(super::plugins::paper::PaperPlugin);
-    // registry.register(super::plugins::purpur::PurpurPlugin);
-    
+    registry.register(super::plugins::paper::create_plugin());
+    registry.register(super::plugins::velocity::create_plugin());
+    registry.register(super::plugins::foila::create_plugin());
+
     registry
 }
 
@@ -266,7 +259,11 @@ pub fn group_versions(versions: Vec<VersionInfo>) -> Vec<VersionGroup> {
     let mut result: Vec<VersionGroup> = groups
         .into_iter()
         .map(|(id, versions)| {
-            let display_name = format!("{}.{}", id.split('.').next().unwrap_or(""), id.split('.').nth(1).unwrap_or(""));
+            let display_name = format!(
+                "{}.{}",
+                id.split('.').next().unwrap_or(""),
+                id.split('.').nth(1).unwrap_or("")
+            );
             VersionGroup {
                 id: id.clone(),
                 display_name: Some(display_name),
@@ -316,14 +313,16 @@ pub async fn fetch_json<T: serde::de::DeserializeOwned>(url: &str) -> Result<T, 
         .map_err(|e| PluginError::ParseError(format!("Failed to read response text: {}", e)))?;
 
     log::debug!("[fetch_json] URL: {}", url);
-    log::debug!("[fetch_json] Response (first 500 chars): {}", text.chars().take(500).collect::<String>());
+    log::debug!(
+        "[fetch_json] Response (first 500 chars): {}",
+        text.chars().take(500).collect::<String>()
+    );
 
-    serde_json::from_str::<T>(&text)
-        .map_err(|e| {
-            log::error!("[fetch_json] Parse error for URL {}: {}", url, e);
-            log::error!("[fetch_json] Full response: {}", text);
-            PluginError::ParseError(format!("error decoding response body: {}", e))
-        })
+    serde_json::from_str::<T>(&text).map_err(|e| {
+        log::error!("[fetch_json] Parse error for URL {}: {}", url, e);
+        log::error!("[fetch_json] Full response: {}", text);
+        PluginError::ParseError(format!("error decoding response body: {}", e))
+    })
 }
 
 #[allow(dead_code)]

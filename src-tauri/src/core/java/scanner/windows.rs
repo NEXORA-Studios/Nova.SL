@@ -6,9 +6,24 @@ fn is_java_like_dir_name(name: &str) -> bool {
 
     // 关键词匹配
     let keywords = [
-        "java", "jdk", "jre", "jvm", "openjdk", "temurin", "corretto",
-        "zulu", "graalvm", "jetbrains", "adoptium", "microsoft", "amazon",
-        "oracle", "redhat", "sap", "liberica", "dragonwell",
+        "java",
+        "jdk",
+        "jre",
+        "jvm",
+        "openjdk",
+        "temurin",
+        "corretto",
+        "zulu",
+        "graalvm",
+        "jetbrains",
+        "adoptium",
+        "microsoft",
+        "amazon",
+        "oracle",
+        "redhat",
+        "sap",
+        "liberica",
+        "dragonwell",
     ];
     if keywords.iter().any(|&k| lower.contains(k)) {
         return true;
@@ -43,7 +58,10 @@ fn scan_dir_recursive(dir: &PathBuf, depth: u32, max_depth: u32, results: &mut V
 
     // 如果当前目录就有 java.exe，直接记录
     if has_java_exe(dir) {
-        log::debug!("[java-scanner][windows] found java.exe at: {}", dir.display());
+        log::debug!(
+            "[java-scanner][windows] found java.exe at: {}",
+            dir.display()
+        );
         results.push(dir.clone());
         return;
     }
@@ -59,9 +77,7 @@ fn scan_dir_recursive(dir: &PathBuf, depth: u32, max_depth: u32, results: &mut V
             continue;
         }
 
-        let name = path.file_name()
-            .and_then(|n| n.to_str())
-            .unwrap_or("");
+        let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
 
         // 子目录名像 Java 目录才继续递归
         if is_java_like_dir_name(name) {
@@ -176,7 +192,10 @@ pub fn scan_drive_roots() -> Vec<PathBuf> {
             continue;
         }
 
-        log::trace!("[java-scanner][windows] listing drive root: {}", root.display());
+        log::trace!(
+            "[java-scanner][windows] listing drive root: {}",
+            root.display()
+        );
 
         let Ok(entries) = std::fs::read_dir(&root) else {
             continue;
@@ -188,10 +207,7 @@ pub fn scan_drive_roots() -> Vec<PathBuf> {
                 continue;
             }
 
-            let name = path
-                .file_name()
-                .and_then(|n| n.to_str())
-                .unwrap_or("");
+            let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
 
             // 只进入看起来像 Java 目录的子文件夹
             if is_java_like_dir_name(name) {

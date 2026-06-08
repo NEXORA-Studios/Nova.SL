@@ -49,12 +49,16 @@ pub fn read_text_file(file_path: &PathBuf) -> Result<(TextFileFormat, TextConten
 
     if !file_path.exists() {
         log::error!("[file-text] file does not exist: {}", file_path.display());
-        return Err(TextFileError::NotFound(file_path.to_string_lossy().to_string()));
+        return Err(TextFileError::NotFound(
+            file_path.to_string_lossy().to_string(),
+        ));
     }
 
     if !file_path.is_file() {
         log::error!("[file-text] path is not a file: {}", file_path.display());
-        return Err(TextFileError::NotAFile(file_path.to_string_lossy().to_string()));
+        return Err(TextFileError::NotAFile(
+            file_path.to_string_lossy().to_string(),
+        ));
     }
 
     let format = TextFileFormat::from_path(file_path);
@@ -96,22 +100,16 @@ pub fn write_text_file(
     log::info!("[file-text] writing text file: {}", file_path.display());
 
     let serialized = match (format, content) {
-        (TextFileFormat::Json, TextContent::Json(value)) => {
-            serde_json::to_string_pretty(value)?
-        }
-        (TextFileFormat::Toml, TextContent::Toml(value)) => {
-            toml::to_string_pretty(value)?
-        }
-        (TextFileFormat::Yaml, TextContent::Yaml(value)) => {
-            serde_yaml::to_string(value)?
-        }
+        (TextFileFormat::Json, TextContent::Json(value)) => serde_json::to_string_pretty(value)?,
+        (TextFileFormat::Toml, TextContent::Toml(value)) => toml::to_string_pretty(value)?,
+        (TextFileFormat::Yaml, TextContent::Yaml(value)) => serde_yaml::to_string(value)?,
         (TextFileFormat::Properties, TextContent::Properties(props)) => {
             serialize_properties(props)?
         }
         (TextFileFormat::Plain, TextContent::Plain(text)) => text.clone(),
         _ => {
             return Err(TextFileError::FormatMismatch(
-                "Content type does not match specified format".to_string()
+                "Content type does not match specified format".to_string(),
             ));
         }
     };
@@ -162,7 +160,9 @@ pub fn write_text_file_raw(
 }
 
 /// 解析 properties 文件
-fn parse_properties(content: &str) -> Result<std::collections::HashMap<String, String>, TextFileError> {
+fn parse_properties(
+    content: &str,
+) -> Result<std::collections::HashMap<String, String>, TextFileError> {
     use java_properties::read;
     use std::io::Cursor;
 
@@ -174,7 +174,9 @@ fn parse_properties(content: &str) -> Result<std::collections::HashMap<String, S
 }
 
 /// 序列化 properties 文件
-fn serialize_properties(props: &std::collections::HashMap<String, String>) -> Result<String, TextFileError> {
+fn serialize_properties(
+    props: &std::collections::HashMap<String, String>,
+) -> Result<String, TextFileError> {
     use java_properties::write;
     use std::io::Cursor;
 
@@ -193,7 +195,9 @@ pub fn read_raw_text(file_path: &PathBuf) -> Result<String, TextFileError> {
 
     if !file_path.exists() {
         log::error!("[file-text] file does not exist: {}", file_path.display());
-        return Err(TextFileError::NotFound(file_path.to_string_lossy().to_string()));
+        return Err(TextFileError::NotFound(
+            file_path.to_string_lossy().to_string(),
+        ));
     }
 
     let content = std::fs::read_to_string(file_path)?;

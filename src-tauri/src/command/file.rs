@@ -1,12 +1,12 @@
 use crate::core::file::explorer::{
-    copy_path, create_directory, create_empty_file, delete_path, get_file_info, list_directory, move_path,
-    rename_path, validate_name, DirectoryListing, FileEntry,
-};
-use crate::core::file::text::{
-    read_text_file, write_text_file, write_text_file_raw, read_raw_text, write_raw_text,
-    TextFileFormat, TextContent,
+    copy_path, create_directory, create_empty_file, delete_path, get_file_info, list_directory,
+    move_path, rename_path, validate_name, DirectoryListing, FileEntry,
 };
 use crate::core::file::nbt::{read_nbt_file, NbtTree};
+use crate::core::file::text::{
+    read_raw_text, read_text_file, write_raw_text, write_text_file, write_text_file_raw,
+    TextContent, TextFileFormat,
+};
 use std::path::PathBuf;
 
 // ==================== 目录浏览命令 ====================
@@ -66,7 +66,11 @@ pub fn get_parent(path: String) -> Option<String> {
 /// 拼接路径
 #[tauri::command]
 pub fn join_paths(base: String, components: Vec<String>) -> String {
-    log::debug!("[command] join_paths: base={}, components={:?}", base, components);
+    log::debug!(
+        "[command] join_paths: base={}, components={:?}",
+        base,
+        components
+    );
     let mut result = PathBuf::from(base);
     for component in components {
         result = result.join(component);
@@ -77,7 +81,11 @@ pub fn join_paths(base: String, components: Vec<String>) -> String {
 /// 创建目录
 #[tauri::command]
 pub fn create_dir(parent_path: String, name: String) -> Result<(), String> {
-    log::info!("[command] create_dir: parent={}, name={}", parent_path, name);
+    log::info!(
+        "[command] create_dir: parent={}, name={}",
+        parent_path,
+        name
+    );
 
     if let Err(e) = validate_name(&name) {
         return Err(e);
@@ -93,7 +101,11 @@ pub fn create_dir(parent_path: String, name: String) -> Result<(), String> {
 /// 创建空文件
 #[tauri::command]
 pub fn create_file(parent_path: String, name: String) -> Result<(), String> {
-    log::info!("[command] create_file: parent={}, name={}", parent_path, name);
+    log::info!(
+        "[command] create_file: parent={}, name={}",
+        parent_path,
+        name
+    );
 
     if let Err(e) = validate_name(&name) {
         return Err(e);
@@ -155,8 +167,15 @@ pub fn delete_file_or_dir(path: String) -> Result<(), String> {
 
 /// 使用外部命令打开文件
 #[tauri::command]
-pub fn open_with_external_command(file_path: String, command_template: String) -> Result<(), String> {
-    log::info!("[command] open_with_external_command: {} with {}", file_path, command_template);
+pub fn open_with_external_command(
+    file_path: String,
+    command_template: String,
+) -> Result<(), String> {
+    log::info!(
+        "[command] open_with_external_command: {} with {}",
+        file_path,
+        command_template
+    );
 
     let command_str = command_template.replace("%file%", &file_path);
 
@@ -173,7 +192,8 @@ pub fn open_with_external_command(file_path: String, command_template: String) -
     {
         let resolved_program = resolve_program_path(program)?;
         let lower = resolved_program.to_lowercase();
-        let is_pe_executable = lower.ends_with(".exe") || lower.ends_with(".com") || lower.ends_with(".dll");
+        let is_pe_executable =
+            lower.ends_with(".exe") || lower.ends_with(".com") || lower.ends_with(".dll");
 
         use std::os::windows::process::CommandExt;
         const CREATE_NO_WINDOW: u32 = 0x08000000;
@@ -227,7 +247,10 @@ fn resolve_program_path(program: &str) -> Result<String, String> {
         return Ok(program.to_string());
     }
 
-    log::debug!("[command] resolving program path via where.exe: {}", program);
+    log::debug!(
+        "[command] resolving program path via where.exe: {}",
+        program
+    );
 
     let output = std::process::Command::new("where.exe")
         .arg(program)
@@ -325,7 +348,8 @@ pub fn write_text(
     // 根据格式将 JSON Value 转换为对应的 TextContent
     let text_content = match &file_format {
         TextFileFormat::Json => {
-            let value: serde_json::Value = serde_json::from_value(content).map_err(|e| e.to_string())?;
+            let value: serde_json::Value =
+                serde_json::from_value(content).map_err(|e| e.to_string())?;
             TextContent::Json(value)
         }
         TextFileFormat::Toml => {
@@ -382,7 +406,11 @@ pub fn write_raw_validated(
     format: String,
     content: String,
 ) -> Result<(), String> {
-    log::info!("[command] write_raw_validated: {}, format={}", file_path, format);
+    log::info!(
+        "[command] write_raw_validated: {}, format={}",
+        file_path,
+        format
+    );
     let path = PathBuf::from(file_path);
 
     let file_format = match format.to_lowercase().as_str() {

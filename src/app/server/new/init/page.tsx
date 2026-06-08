@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useParams, useLocation } from "react-router";
 import {
-    AlertCircleIcon,
     ArrowLeftIcon,
     CheckCircle2Icon,
     CpuIcon,
@@ -16,6 +15,7 @@ import {
     XIcon,
     ZapIcon,
 } from "lucide-react";
+import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -79,7 +79,6 @@ function InitServerPage() {
     const [javas, setJavas] = useState<JavaInstallation[]>([]);
     const [availableMethods, setAvailableMethods] = useState<string[]>([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState("");
 
     const [displayName, setDisplayName] = useState("");
     const [port, setPort] = useState(25565);
@@ -110,7 +109,7 @@ function InitServerPage() {
         if (!serverId) return;
 
         if (!stateData || !stateData.path) {
-            setError("缺少实例元数据，请从创建或导入页面进入");
+            toast.error("缺少实例元数据，请从创建或导入页面进入");
             setLoading(false);
             return;
         }
@@ -156,7 +155,6 @@ function InitServerPage() {
         if (!instanceMeta || !serverId) return;
 
         setSaving(true);
-        setError("");
 
         try {
             await saveInstancePrelaunchConfig(
@@ -179,11 +177,25 @@ function InitServerPage() {
 
             navigate("/");
         } catch (err) {
-            setError(`保存配置失败: ${err}`);
+            toast.error(`保存配置失败: ${err}`);
         } finally {
             setSaving(false);
         }
-    }, [instanceMeta, serverId, displayName, port, minMemory, maxMemory, launchMethod, javaTarget, onlineMode, eula, recommendedArgs, addInstance, navigate]);
+    }, [
+        instanceMeta,
+        serverId,
+        displayName,
+        port,
+        minMemory,
+        maxMemory,
+        launchMethod,
+        javaTarget,
+        onlineMode,
+        eula,
+        recommendedArgs,
+        addInstance,
+        navigate,
+    ]);
 
     const loaderLabel = instanceMeta ? (LOADER_LABELS[instanceMeta.loader] ?? instanceMeta.loader) : "";
 
@@ -206,13 +218,6 @@ function InitServerPage() {
                     <p className="text-sm text-muted-foreground">在第一次启动服务器之前，完成以下配置项</p>
                 </div>
             </div>
-
-            {error && (
-                <div className="flex items-center gap-2 rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
-                    <AlertCircleIcon className="size-4 shrink-0" />
-                    {error}
-                </div>
-            )}
 
             {instanceMeta && (
                 <>
@@ -293,7 +298,8 @@ function InitServerPage() {
                                             className="h-10"
                                         />
                                         <p className="text-xs text-muted-foreground">
-                                            允许实例使用的<strong>最小内存</strong>，默认为 <code className="rounded bg-muted px-1">1024</code> MB
+                                            允许实例使用的<strong>最小内存</strong>，默认为{" "}
+                                            <code className="rounded bg-muted px-1">1024</code> MB
                                             <br />
                                             此数值不宜设置过小，通常 1024 即可适配市面上大多数服务器
                                         </p>
@@ -309,7 +315,8 @@ function InitServerPage() {
                                             className="h-10"
                                         />
                                         <p className="text-xs text-muted-foreground">
-                                            允许实例使用的<strong>最大内存</strong>，默认为 <code className="rounded bg-muted px-1">4096</code> MB
+                                            允许实例使用的<strong>最大内存</strong>，默认为{" "}
+                                            <code className="rounded bg-muted px-1">4096</code> MB
                                             <br />
                                             此数值不宜设置过大，通常 8192 即可适配市面上大多数服务器
                                         </p>
@@ -406,7 +413,7 @@ function InitServerPage() {
                                                         <Badge
                                                             key={i}
                                                             variant="outline"
-                                                            className="group flex items-center gap-1 pl-2 pr-1.5 font-mono text-xs">
+                                                            className="group flex items-center gap-1 pr-1.5 pl-2 font-mono text-xs">
                                                             {arg}
                                                             <button
                                                                 type="button"

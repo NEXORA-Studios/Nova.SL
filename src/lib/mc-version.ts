@@ -106,10 +106,7 @@ export function sortMcVersions(versions: string[], order: "desc" | "asc" = "desc
     return order === "desc" ? sorted.reverse() : sorted;
 }
 
-export function sortVersionInfos<T extends { id: string }>(
-    versions: T[],
-    order: "desc" | "asc" = "desc"
-): T[] {
+export function sortVersionInfos<T extends { id: string }>(versions: T[], order: "desc" | "asc" = "desc"): T[] {
     const sorted = [...versions].sort((a, b) => compareMcVersions(a.id, b.id));
     return order === "desc" ? sorted.reverse() : sorted;
 }

@@ -51,7 +51,10 @@ pub fn validate(home: PathBuf, source: JavaSource) -> Option<JavaInstallation> {
     let major = version::parse_major_version(&version_str)?;
     let vendor = version::parse_vendor(version_text);
 
-    let is_jdk = home.join("bin").join(if cfg!(windows) { "javac.exe" } else { "javac" }).exists();
+    let is_jdk = home
+        .join("bin")
+        .join(if cfg!(windows) { "javac.exe" } else { "javac" })
+        .exists();
 
     log::info!(
         "[java-scanner] validated: {} -> version={} major={} vendor={:?} is_jdk={} source={:?}",

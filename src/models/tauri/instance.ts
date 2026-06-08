@@ -1,4 +1,5 @@
 export interface InstanceMetadata {
+    id: string;
     name: string;
     version: string;
     loader: string;
@@ -6,6 +7,11 @@ export interface InstanceMetadata {
 
 export interface InstanceConfig {
     instance: InstanceMetadata;
+}
+
+export interface ServerProperties {
+    port: number;
+    online_mode: boolean;
 }
 
 export interface ModEntry {

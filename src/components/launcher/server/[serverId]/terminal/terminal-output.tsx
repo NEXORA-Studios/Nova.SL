@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { cn } from "@/lib/utils";
+import { cn } from "@/utils/utils";
 
 export interface TerminalLine {
     id: string;
@@ -31,14 +31,12 @@ function TerminalOutput({ lines, className }: TerminalOutputProps) {
     }, [lines]);
 
     return (
-        <div
-            ref={scrollRef}
-            className={cn("flex-1 overflow-auto font-mono text-sm leading-relaxed p-4", className)}>
+        <div ref={scrollRef} className={cn("flex-1 overflow-auto p-4 font-mono text-sm leading-relaxed", className)}>
             {lines.map((line) => (
-                <div key={line.id} className={cn("flex gap-3 whitespace-pre-wrap break-all", lineTypeStyles[line.type ?? "default"])}>
-                    {line.timestamp && (
-                        <span className="shrink-0 text-muted-foreground/50 select-none">{line.timestamp}</span>
-                    )}
+                <div
+                    key={line.id}
+                    className={cn("flex gap-3 break-all whitespace-pre-wrap", lineTypeStyles[line.type ?? "default"])}>
+                    {line.timestamp && <span className="shrink-0 text-muted-foreground/50 select-none">{line.timestamp}</span>}
                     <span>{line.text}</span>
                 </div>
             ))}

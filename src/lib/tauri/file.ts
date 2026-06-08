@@ -76,7 +76,11 @@ export async function readText(filePath: string): Promise<{ format: TauriBridge.
     return { format: format as TauriBridge.File.Text.TextFileFormat, content };
 }
 
-export async function writeText(filePath: string, format: TauriBridge.File.Text.TextFileFormat, content: unknown): Promise<void> {
+export async function writeText(
+    filePath: string,
+    format: TauriBridge.File.Text.TextFileFormat,
+    content: unknown
+): Promise<void> {
     return invoke<void>("write_text", { filePath, format, content });
 }
 

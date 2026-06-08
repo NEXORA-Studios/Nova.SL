@@ -12,12 +12,12 @@ mod common;
 mod validate;
 mod version;
 
-#[cfg(target_os = "windows")]
-mod windows;
 #[cfg(target_os = "linux")]
 mod linux;
 #[cfg(target_os = "macos")]
 mod macos;
+#[cfg(target_os = "windows")]
+mod windows;
 
 pub use validate::{JavaInstallation as ScannerJavaInstallation, JavaSource};
 
@@ -75,11 +75,23 @@ impl Default for JavaConfig {
 #[derive(Debug, Clone, Serialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum ScanEvent {
-    Started { total_paths: usize },
-    ScanningPath { path: String, current: usize, total: usize },
-    Found { java: JavaInstallation },
-    Completed { found: usize },
-    Error { message: String },
+    Started {
+        total_paths: usize,
+    },
+    ScanningPath {
+        path: String,
+        current: usize,
+        total: usize,
+    },
+    Found {
+        java: JavaInstallation,
+    },
+    Completed {
+        found: usize,
+    },
+    Error {
+        message: String,
+    },
 }
 
 // ==================== 缓存读写 ====================
@@ -93,23 +105,35 @@ fn cache_path(app: &AppHandle) -> PathBuf {
 
 pub fn load_java_config(app: &AppHandle) -> Result<JavaConfig, JavaScanError> {
     let path = cache_path(app);
-    log::debug!("[java-scanner] loading java config from: {}", path.display());
+    log::debug!(
+        "[java-scanner] loading java config from: {}",
+        path.display()
+    );
     if !path.exists() {
         log::debug!("[java-scanner] java config file not found, returning default");
         return Ok(JavaConfig::default());
     }
     let content = fs::read_to_string(&path)?;
     let config = toml::from_str::<JavaConfig>(&content)?;
-    log::info!("[java-scanner] loaded {} java installations", config.instances.len());
+    log::info!(
+        "[java-scanner] loaded {} java installations",
+        config.instances.len()
+    );
     Ok(config)
 }
 
 pub fn save_java_config(app: &AppHandle, config: &JavaConfig) -> Result<(), JavaScanError> {
-    let dir = app.path().app_config_dir().expect("app config dir not found");
+    let dir = app
+        .path()
+        .app_config_dir()
+        .expect("app config dir not found");
     fs::create_dir_all(&dir)?;
     let content = toml::to_string_pretty(config)?;
     fs::write(cache_path(app), &content)?;
-    log::info!("[java-scanner] saved java config with {} installations", config.instances.len());
+    log::info!(
+        "[java-scanner] saved java config with {} installations",
+        config.instances.len()
+    );
     Ok(())
 }
 
@@ -157,14 +181,20 @@ fn collect_scan_paths() -> Vec<(PathBuf, JavaSource)> {
 
         log::debug!("[java-scanner] running windows common dirs scan");
         let common_dirs = windows::scan_common_dirs();
-        log::info!("[java-scanner] common dirs found {} paths", common_dirs.len());
+        log::info!(
+            "[java-scanner] common dirs found {} paths",
+            common_dirs.len()
+        );
         for p in common_dirs {
             paths.push((p, JavaSource::CommonDir));
         }
 
         log::debug!("[java-scanner] running windows drive roots scan");
         let drive_roots = windows::scan_drive_roots();
-        log::info!("[java-scanner] drive roots found {} paths", drive_roots.len());
+        log::info!(
+            "[java-scanner] drive roots found {} paths",
+            drive_roots.len()
+        );
         for p in drive_roots {
             paths.push((p, JavaSource::CommonDir));
         }
@@ -181,14 +211,20 @@ fn collect_scan_paths() -> Vec<(PathBuf, JavaSource)> {
     {
         log::debug!("[java-scanner] running linux alternatives scan");
         let alternatives = linux::scan_alternatives();
-        log::info!("[java-scanner] alternatives found {} paths", alternatives.len());
+        log::info!(
+            "[java-scanner] alternatives found {} paths",
+            alternatives.len()
+        );
         for p in alternatives {
             paths.push((p, JavaSource::LinuxAlternatives));
         }
 
         log::debug!("[java-scanner] running linux common dirs scan");
         let common_dirs = linux::scan_common_dirs();
-        log::info!("[java-scanner] common dirs found {} paths", common_dirs.len());
+        log::info!(
+            "[java-scanner] common dirs found {} paths",
+            common_dirs.len()
+        );
         for p in common_dirs {
             paths.push((p, JavaSource::CommonDir));
         }
@@ -205,7 +241,10 @@ fn collect_scan_paths() -> Vec<(PathBuf, JavaSource)> {
 
         log::debug!("[java-scanner] running macos common dirs scan");
         let common_dirs = macos::scan_common_dirs();
-        log::info!("[java-scanner] common dirs found {} paths", common_dirs.len());
+        log::info!(
+            "[java-scanner] common dirs found {} paths",
+            common_dirs.len()
+        );
         for p in common_dirs {
             paths.push((p, JavaSource::CommonDir));
         }
@@ -253,7 +292,11 @@ pub fn scan_java_installations_with_callback(
 
         if let Ok(canonical) = p.canonicalize() {
             let canonical = strip_unc_prefix(canonical);
-            log::trace!("[java-scanner] canonicalized: {} -> {}", p.display(), canonical.display());
+            log::trace!(
+                "[java-scanner] canonicalized: {} -> {}",
+                p.display(),
+                canonical.display()
+            );
             normalized.push((canonical, source));
         } else {
             log::trace!("[java-scanner] failed to canonicalize: {}", p.display());
@@ -272,7 +315,10 @@ pub fn scan_java_installations_with_callback(
     );
 
     // 并行验证
-    log::info!("[java-scanner] starting parallel validation of {} paths", normalized.len());
+    log::info!(
+        "[java-scanner] starting parallel validation of {} paths",
+        normalized.len()
+    );
     let validated: Vec<Option<ScannerJavaInstallation>> = normalized
         .par_iter()
         .map(|(p, source)| validate::validate(p.clone(), *source))
@@ -284,7 +330,10 @@ pub fn scan_java_installations_with_callback(
         .map(JavaInstallation::from)
         .collect();
 
-    log::info!("[java-scanner] validation complete: {} valid installations", results.len());
+    log::info!(
+        "[java-scanner] validation complete: {} valid installations",
+        results.len()
+    );
 
     // 保留旧配置中的手动添加项和 enabled 状态
     let old_config = load_java_config(app).unwrap_or_default();
@@ -295,7 +344,10 @@ pub fn scan_java_installations_with_callback(
         .filter(|j| !results.iter().any(|r| r.path == j.path))
         .cloned()
         .collect();
-    log::info!("[java-scanner] preserving {} manual installations from config", old_manual.len());
+    log::info!(
+        "[java-scanner] preserving {} manual installations from config",
+        old_manual.len()
+    );
 
     // 恢复旧配置中的 enabled 状态
     let old_enabled: std::collections::HashMap<String, bool> = old_config
@@ -333,7 +385,10 @@ pub fn scan_java_installations_with_callback(
         found: results.len(),
     });
 
-    log::info!("[java-scanner] scan completed: {} total installations", results.len());
+    log::info!(
+        "[java-scanner] scan completed: {} total installations",
+        results.len()
+    );
     Ok(results)
 }
 
@@ -358,11 +413,7 @@ pub fn remove_from_cache(app: &AppHandle, path: &str) -> Result<(), JavaScanErro
     Ok(())
 }
 
-pub fn update_java_entry(
-    app: &AppHandle,
-    path: &str,
-    enabled: bool,
-) -> Result<(), JavaScanError> {
+pub fn update_java_entry(app: &AppHandle, path: &str, enabled: bool) -> Result<(), JavaScanError> {
     let mut config = load_java_config(app)?;
     for entry in &mut config.instances {
         if entry.path == path {

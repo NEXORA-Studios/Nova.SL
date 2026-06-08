@@ -149,10 +149,7 @@ pub fn import_instance(
     let id = uuid::Uuid::new_v4().to_string();
     log::info!("[command] import_instance: generated id={}", id);
 
-    log::info!(
-        "[command] import_instance: completed, id={}",
-        id
-    );
+    log::info!("[command] import_instance: completed, id={}", id);
 
     Ok(id)
 }
@@ -294,10 +291,7 @@ pub async fn create_server_instance(
         }
     }
 
-    log::info!(
-        "[command] create_server_instance: completed, id={}",
-        id
-    );
+    log::info!("[command] create_server_instance: completed, id={}", id);
 
     Ok(id)
 }
@@ -449,7 +443,10 @@ pub fn save_instance_prelaunch_config(
         },
     };
     instance_config::save_instance_config(&path, &instance_config_data).map_err(|e| {
-        log::error!("[command] save_instance_prelaunch_config: save Instance.toml failed: {:?}", e);
+        log::error!(
+            "[command] save_instance_prelaunch_config: save Instance.toml failed: {:?}",
+            e
+        );
         format!("保存 Instance.toml 失败: {:?}", e)
     })?;
     log::info!("[command] save_instance_prelaunch_config: Instance.toml saved");
@@ -504,12 +501,13 @@ pub fn save_instance_prelaunch_config(
             gc: None,
             extra_args: extra_args,
         },
-        game_props: instance_config::GameProps {
-            nogui: true,
-        },
+        game_props: instance_config::GameProps { nogui: true },
     };
     instance_config::save_launch_config(&path, &launch_config).map_err(|e| {
-        log::error!("[command] save_instance_prelaunch_config: save Launch.toml failed: {:?}", e);
+        log::error!(
+            "[command] save_instance_prelaunch_config: save Launch.toml failed: {:?}",
+            e
+        );
         format!("保存 Launch.toml 失败: {:?}", e)
     })?;
     log::info!("[command] save_instance_prelaunch_config: Launch.toml saved");
@@ -521,7 +519,10 @@ pub fn save_instance_prelaunch_config(
     if eula_agreed {
         let eula_path = path.join("eula.txt");
         std::fs::write(&eula_path, "eula=true\n").map_err(|e| {
-            log::error!("[command] save_instance_prelaunch_config: write eula.txt failed: {}", e);
+            log::error!(
+                "[command] save_instance_prelaunch_config: write eula.txt failed: {}",
+                e
+            );
             format!("写入 eula.txt 失败: {}", e)
         })?;
         log::info!("[command] save_instance_prelaunch_config: eula.txt written");
@@ -556,6 +557,291 @@ pub fn update_launch_config(
         log::error!("[command] update_launch_config failed: {:?}", e);
         format!("{:?}", e)
     })
+}
+
+/// 读取 server.properties 中的关键配置
+#[tauri::command]
+pub fn get_server_properties(instance_dir: String) -> Result<ServerProperties, String> {
+    let path = PathBuf::from(&instance_dir).join("server.properties");
+    if !path.exists() {
+        return Ok(ServerProperties {
+            port: 25565,
+            online_mode: true,
+        });
+    }
+
+    let content = std::fs::read_to_string(&path)
+        .map_err(|e| format!("读取 server.properties 失败: {}", e))?;
+
+    let mut port = 25565u16;
+    let mut online_mode = true;
+
+    for line in content.lines() {
+        let trimmed = line.trim();
+        if trimmed.starts_with("server-port=") || trimmed.starts_with("server-port ") {
+            if let Some(val) = trimmed
+                .split('=')
+                .nth(1)
+                .or_else(|| trimmed.split(' ').nth(1))
+            {
+                port = val.trim().parse().unwrap_or(25565);
+            }
+        } else if trimmed.starts_with("online-mode=") || trimmed.starts_with("online-mode ") {
+            if let Some(val) = trimmed
+                .split('=')
+                .nth(1)
+                .or_else(|| trimmed.split(' ').nth(1))
+            {
+                online_mode = val.trim() == "true";
+            }
+        }
+    }
+
+    Ok(ServerProperties { port, online_mode })
+}
+
+/// 更新 server.properties 和 eula.txt
+#[tauri::command]
+pub fn update_server_settings(
+    instance_dir: String,
+    port: u16,
+    online_mode: bool,
+) -> Result<(), String> {
+    log::info!(
+        "[command] update_server_settings: dir={}, port={}, online={}",
+        instance_dir,
+        port,
+        online_mode
+    );
+
+    let path = PathBuf::from(&instance_dir);
+
+    update_server_properties(&path, port, online_mode)?;
+
+    log::info!("[command] update_server_settings completed");
+    Ok(())
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct ServerProperties {
+    pub port: u16,
+    pub online_mode: bool,
+}
+
+/// 从文件内容提取 keys
+fn extract_keys_from_content(content: &str) -> Vec<String> {
+    let mut keys = Vec::new();
+    for line in content.lines() {
+        let trimmed = line.trim();
+        if trimmed.is_empty() || trimmed.starts_with('#') {
+            continue;
+        }
+        if let Some(eq_pos) = trimmed.find('=') {
+            keys.push(trimmed[..eq_pos].to_string());
+        } else if let Some(space_pos) = trimmed.find(' ') {
+            keys.push(trimmed[..space_pos].to_string());
+        }
+    }
+    keys.sort();
+    keys
+}
+
+/// 备份 server.properties 到 .nova/ 目录
+/// 如果 backup_exists 为 false 或 force 为 true，则会重新备份
+fn backup_server_properties(instance_dir: &PathBuf, force: bool) -> Result<PathBuf, String> {
+    let source = instance_dir.join("server.properties");
+    let backup_dir = instance_dir.join(".nova");
+    let backup_path = backup_dir.join("server.properties");
+
+    // 确保 .nova 目录存在
+    if !backup_dir.exists() {
+        std::fs::create_dir_all(&backup_dir).map_err(|e| format!("创建 .nova 目录失败: {}", e))?;
+    }
+
+    let should_backup = if !source.exists() {
+        // 源文件不存在，不备份
+        false
+    } else if force || !backup_path.exists() {
+        // 强制备份或备份不存在
+        true
+    } else {
+        // 检查 keys 是否一致
+        let source_content =
+            std::fs::read_to_string(&source).map_err(|e| format!("读取源文件失败: {}", e))?;
+        let backup_content = std::fs::read_to_string(&backup_path)
+            .map_err(|e| format!("读取备份文件失败: {}", e))?;
+
+        let source_keys = extract_keys_from_content(&source_content);
+        let backup_keys = extract_keys_from_content(&backup_content);
+
+        if source_keys != backup_keys {
+            log::info!(
+                "[command] server.properties keys mismatch: source={}, backup={}, will resync",
+                source_keys.len(),
+                backup_keys.len()
+            );
+            true
+        } else {
+            false
+        }
+    };
+
+    if should_backup {
+        std::fs::copy(&source, &backup_path)
+            .map_err(|e| format!("备份 server.properties 失败: {}", e))?;
+        log::info!(
+            "[command] server.properties backed up to .nova/ (force={})",
+            force
+        );
+    }
+
+    Ok(backup_path)
+}
+
+/// 从备份文件读取配置项列表（用于确定展示哪些字段）
+/// force_sync: 强制重新同步备份，即使备份已存在
+#[tauri::command]
+pub fn get_server_properties_keys(
+    instance_dir: String,
+    force_sync: Option<bool>,
+) -> Result<Vec<String>, String> {
+    let instance_path = PathBuf::from(&instance_dir);
+    let force = force_sync.unwrap_or(false);
+
+    // 先确保有备份（如果 force 为 true 会重新备份）
+    let backup_path = backup_server_properties(&instance_path, force)?;
+
+    // 读取备份文件
+    let content = if backup_path.exists() {
+        std::fs::read_to_string(&backup_path).map_err(|e| format!("读取备份文件失败: {}", e))?
+    } else {
+        // 备份不存在，尝试读取原文件
+        let source = instance_path.join("server.properties");
+        if source.exists() {
+            std::fs::read_to_string(&source)
+                .map_err(|e| format!("读取 server.properties 失败: {}", e))?
+        } else {
+            return Ok(Vec::new());
+        }
+    };
+
+    let keys = extract_keys_from_content(&content);
+
+    log::info!(
+        "[command] get_server_properties_keys: found {} keys (force_sync={})",
+        keys.len(),
+        force
+    );
+    Ok(keys)
+}
+
+/// 读取 server.properties 文件内容
+/// 返回键值对形式的所有配置项
+#[tauri::command]
+pub fn read_server_properties(
+    instance_dir: String,
+) -> Result<std::collections::HashMap<String, String>, String> {
+    let path = PathBuf::from(&instance_dir).join("server.properties");
+
+    // 确保有备份（不强制，由 get_server_properties_keys 控制）
+    let _ = backup_server_properties(&PathBuf::from(&instance_dir), false)?;
+
+    if !path.exists() {
+        // 文件不存在，返回空 map
+        return Ok(std::collections::HashMap::new());
+    }
+
+    let content = std::fs::read_to_string(&path)
+        .map_err(|e| format!("读取 server.properties 失败: {}", e))?;
+
+    let mut properties = std::collections::HashMap::new();
+
+    for line in content.lines() {
+        let trimmed = line.trim();
+        // 跳过注释和空行
+        if trimmed.is_empty() || trimmed.starts_with('#') {
+            continue;
+        }
+        // 解析 key=value 格式
+        if let Some(eq_pos) = trimmed.find('=') {
+            let key = &trimmed[..eq_pos];
+            let value = &trimmed[eq_pos + 1..];
+            properties.insert(key.to_string(), value.to_string());
+        } else if let Some(space_pos) = trimmed.find(' ') {
+            // 兼容旧格式 key value
+            let key = &trimmed[..space_pos];
+            let value = &trimmed[space_pos + 1..];
+            properties.insert(key.to_string(), value.to_string());
+        }
+    }
+
+    log::info!(
+        "[command] read_server_properties: loaded {} properties",
+        properties.len()
+    );
+    Ok(properties)
+}
+
+/// 写入完整的 server.properties 文件内容
+#[tauri::command]
+pub fn write_server_properties(
+    instance_dir: String,
+    properties: std::collections::HashMap<String, serde_json::Value>,
+) -> Result<(), String> {
+    let path = PathBuf::from(&instance_dir).join("server.properties");
+
+    // 读取现有文件内容（保留注释）
+    let existing_content = if path.exists() {
+        std::fs::read_to_string(&path).unwrap_or_default()
+    } else {
+        String::new()
+    };
+
+    let mut lines: Vec<String> = existing_content.lines().map(|l| l.to_string()).collect();
+    let mut updated_keys = std::collections::HashSet::new();
+
+    // 更新或添加配置项
+    for (key, value) in &properties {
+        let value_str = match value {
+            serde_json::Value::Bool(b) => b.to_string(),
+            serde_json::Value::Number(n) => n.to_string(),
+            serde_json::Value::String(s) => s.clone(),
+            _ => value.to_string(),
+        };
+
+        let new_line = format!("{}={}", key, value_str);
+        let mut found = false;
+
+        // 尝试更新现有行
+        for line in &mut lines {
+            let trimmed = line.trim();
+            if trimmed.starts_with(&format!("{}=", key))
+                || trimmed.starts_with(&format!("{} ", key))
+            {
+                *line = new_line.clone();
+                found = true;
+                break;
+            }
+        }
+
+        // 如果没找到，添加到文件末尾
+        if !found {
+            lines.push(new_line);
+        }
+
+        updated_keys.insert(key.clone());
+    }
+
+    // 确保文件以换行符结尾
+    let content = lines.join("\n") + "\n";
+
+    std::fs::write(&path, content).map_err(|e| format!("写入 server.properties 失败: {}", e))?;
+
+    log::info!(
+        "[command] write_server_properties: updated {} properties",
+        updated_keys.len()
+    );
+    Ok(())
 }
 
 /// 获取实例进程状态
@@ -613,43 +899,45 @@ pub async fn start_instance(
         })?;
 
     // 解析 java 路径：auto / java / java.exe 都走自动选择
-    let java_path =
-        if meta.java_target == "auto" || meta.java_target == "java" || meta.java_target == "java.exe" {
-            // 从扫描的 Java 列表中选择最合适的
-            let javas = crate::core::java::scanner::get_cached_javas(&app)
-                .map_err(|e| format!("读取 Java 缓存失败: {:?}", e))?;
+    let java_path = if meta.java_target == "auto"
+        || meta.java_target == "java"
+        || meta.java_target == "java.exe"
+    {
+        // 从扫描的 Java 列表中选择最合适的
+        let javas = crate::core::java::scanner::get_cached_javas(&app)
+            .map_err(|e| format!("读取 Java 缓存失败: {:?}", e))?;
 
-            let selected = select_java_for_server(
-                &javas,
-                &instance_meta.instance.version,
-                &instance_meta.instance.loader,
-            );
+        let selected = select_java_for_server(
+            &javas,
+            &instance_meta.instance.version,
+            &instance_meta.instance.loader,
+        );
 
-            match selected {
-                Some(java) => {
-                    log::info!(
-                        "[command] start_instance: auto-selected java: {} (v{})",
-                        java.path,
-                        java.version
-                    );
-                    // 拼接 bin/java.exe
-                    let bin = PathBuf::from(&java.path)
-                        .join("bin")
-                        .join(if cfg!(windows) { "java.exe" } else { "java" });
-                    bin.to_string_lossy().to_string()
-                }
-                None => {
-                    log::warn!(
-                        "[command] start_instance: no suitable java found, falling back to 'java'"
-                    );
-                    which::which("java")
-                        .map(|p| p.to_string_lossy().to_string())
-                        .unwrap_or_else(|_| "java".to_string())
-                }
+        match selected {
+            Some(java) => {
+                log::info!(
+                    "[command] start_instance: auto-selected java: {} (v{})",
+                    java.path,
+                    java.version
+                );
+                // 拼接 bin/java.exe
+                let bin = PathBuf::from(&java.path)
+                    .join("bin")
+                    .join(if cfg!(windows) { "java.exe" } else { "java" });
+                bin.to_string_lossy().to_string()
             }
-        } else {
-            meta.java_target.clone()
-        };
+            None => {
+                log::warn!(
+                    "[command] start_instance: no suitable java found, falling back to 'java'"
+                );
+                which::which("java")
+                    .map(|p| p.to_string_lossy().to_string())
+                    .unwrap_or_else(|_| "java".to_string())
+            }
+        }
+    } else {
+        meta.java_target.clone()
+    };
     log::info!(
         "[command] start_instance: java_path={}, server_jar={}, min_mem={}, max_mem={}, gc={:?}, nogui={}",
         java_path, meta.server_jar, jvm.min_memory, jvm.max_memory, jvm.gc, props.nogui
@@ -763,54 +1051,47 @@ pub struct LogEntry {
     pub timestamp: String,
 }
 
-/// 获取实例的历史日志
+/// 获取实例的历史日志（从 Agent 的 Backlog）
 #[tauri::command]
 pub async fn get_instance_logs(
-    app: AppHandle,
+    _app: AppHandle,
     instance_id: String,
 ) -> Result<Vec<LogEntry>, String> {
     log::info!("[command] get_instance_logs: id={}", instance_id);
 
-    // 获取实例配置以找到工作目录
-    let config = crate::core::app::config::load(&app).map_err(|e| {
-        log::error!("[command] get_instance_logs: failed to load config: {}", e);
-        "Failed to load config".to_string()
-    })?;
+    // 通过 Agent 获取 Backlog
+    let req = crate::core::instance::agent::AgentRequest::GetBacklog {
+        id: instance_id.clone(),
+    };
 
-    let instance_config = config
-        .server
-        .instances
-        .iter()
-        .find(|i| i.id == instance_id)
-        .ok_or_else(|| {
-            log::error!("[command] get_instance_logs: instance not found");
-            "Instance not found".to_string()
+    let resp = crate::core::instance::agent::send_request(&req)
+        .await
+        .map_err(|e| {
+            log::error!("[command] get_instance_logs: failed to get backlog: {}", e);
+            format!("获取日志失败: {}", e)
         })?;
 
-    let working_dir = std::path::Path::new(&instance_config.path);
-    let log_path = working_dir.join(".nova").join("stream").join("console.log");
-
-    if !log_path.exists() {
-        log::info!("[command] get_instance_logs: no log file found");
-        return Ok(Vec::new());
-    }
-
-    // 读取日志文件
-    let content = tokio::fs::read_to_string(&log_path).await.map_err(|e| {
-        log::error!("[command] get_instance_logs: failed to read log: {}", e);
-        e.to_string()
-    })?;
-
-    let mut entries = Vec::new();
-    for line in content.lines() {
-        // 解析格式: <stream> [timestamp] | message
-        if let Some(entry) = parse_log_line(line) {
-            entries.push(entry);
+    let entries = match crate::core::instance::agent::check_response(resp) {
+        Ok(crate::core::instance::agent::AgentResponseData::Backlog(backlog)) => backlog
+            .into_iter()
+            .map(|cl| LogEntry {
+                stream: cl.stream,
+                line: cl.line,
+                timestamp: cl.timestamp.to_string(),
+            })
+            .collect(),
+        Ok(_) => {
+            log::warn!("[command] get_instance_logs: unexpected response type");
+            Vec::new()
         }
-    }
+        Err(e) => {
+            log::error!("[command] get_instance_logs: agent error: {}", e);
+            return Err(format!("Agent 错误: {}", e));
+        }
+    };
 
     log::info!(
-        "[command] get_instance_logs: loaded {} entries",
+        "[command] get_instance_logs: loaded {} entries from agent backlog",
         entries.len()
     );
     Ok(entries)

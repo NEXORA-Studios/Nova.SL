@@ -1,4 +1,4 @@
-import { cn } from "@/lib/utils";
+import { cn } from "@/utils/utils";
 import {
     FolderIcon,
     FileIcon,
@@ -157,39 +157,32 @@ function FileList({
                                 }}>
                                 <div className="flex min-w-0 items-center gap-2">
                                     <Icon
-                                        className={cn("size-4 shrink-0", isDirectory ? "text-yellow-500" : "text-muted-foreground")}
+                                        className={cn(
+                                            "size-4 shrink-0",
+                                            isDirectory ? "text-yellow-500" : "text-muted-foreground"
+                                        )}
                                     />
                                     <span className="truncate">{item.name}</span>
                                 </div>
-                                <span className="text-xs text-muted-foreground">{isDirectory ? "--" : formatFileSize(item.size)}</span>
+                                <span className="text-xs text-muted-foreground">
+                                    {isDirectory ? "--" : formatFileSize(item.size)}
+                                </span>
                                 <span className="text-xs text-muted-foreground">{formatDate(item.modified)}</span>
                             </div>
                         </ContextMenuTrigger>
                         <ContextMenuContent className="w-48">
-                            <ContextMenuItem onClick={() => onContextOpen?.(item)}>
-                                打开
-                            </ContextMenuItem>
+                            <ContextMenuItem onClick={() => onContextOpen?.(item)}>打开</ContextMenuItem>
                             {!isDirectory && (
-                                <ContextMenuItem onClick={() => onContextOpenExternal?.(item)}>
-                                    外部打开
-                                </ContextMenuItem>
+                                <ContextMenuItem onClick={() => onContextOpenExternal?.(item)}>外部打开</ContextMenuItem>
                             )}
                             <ContextMenuSeparator />
-                            <ContextMenuItem onClick={() => onContextCut?.([item])}>
-                                剪切
-                            </ContextMenuItem>
-                            <ContextMenuItem onClick={() => onContextCopy?.([item])}>
-                                复制
-                            </ContextMenuItem>
-                            <ContextMenuItem
-                                onClick={() => onContextPaste?.()}
-                                disabled={!canPaste}>
+                            <ContextMenuItem onClick={() => onContextCut?.([item])}>剪切</ContextMenuItem>
+                            <ContextMenuItem onClick={() => onContextCopy?.([item])}>复制</ContextMenuItem>
+                            <ContextMenuItem onClick={() => onContextPaste?.()} disabled={!canPaste}>
                                 粘贴
                             </ContextMenuItem>
                             <ContextMenuSeparator />
-                            <ContextMenuItem onClick={() => onContextRename?.(item)}>
-                                重命名
-                            </ContextMenuItem>
+                            <ContextMenuItem onClick={() => onContextRename?.(item)}>重命名</ContextMenuItem>
                         </ContextMenuContent>
                     </ContextMenu>
                 );
@@ -200,4 +193,3 @@ function FileList({
 
 export { FileList };
 export type { FileEntry };
-

@@ -236,14 +236,22 @@ pub fn create_empty_file(file_path: &PathBuf) -> Result<(), FileExplorerError> {
 
 /// 复制文件或目录（递归）
 pub fn copy_path(src: &PathBuf, dst: &PathBuf) -> Result<(), FileExplorerError> {
-    log::info!("[file-explorer] copying {} -> {}", src.display(), dst.display());
+    log::info!(
+        "[file-explorer] copying {} -> {}",
+        src.display(),
+        dst.display()
+    );
 
     if !src.exists() {
-        return Err(FileExplorerError::NotFound(src.to_string_lossy().to_string()));
+        return Err(FileExplorerError::NotFound(
+            src.to_string_lossy().to_string(),
+        ));
     }
 
     if dst.exists() {
-        return Err(FileExplorerError::AlreadyExists(dst.to_string_lossy().to_string()));
+        return Err(FileExplorerError::AlreadyExists(
+            dst.to_string_lossy().to_string(),
+        ));
     }
 
     if src.is_file() {
@@ -276,14 +284,22 @@ fn copy_dir_recursive(src: &PathBuf, dst: &PathBuf) -> Result<(), FileExplorerEr
 
 /// 移动文件或目录
 pub fn move_path(src: &PathBuf, dst: &PathBuf) -> Result<(), FileExplorerError> {
-    log::info!("[file-explorer] moving {} -> {}", src.display(), dst.display());
+    log::info!(
+        "[file-explorer] moving {} -> {}",
+        src.display(),
+        dst.display()
+    );
 
     if !src.exists() {
-        return Err(FileExplorerError::NotFound(src.to_string_lossy().to_string()));
+        return Err(FileExplorerError::NotFound(
+            src.to_string_lossy().to_string(),
+        ));
     }
 
     if dst.exists() {
-        return Err(FileExplorerError::AlreadyExists(dst.to_string_lossy().to_string()));
+        return Err(FileExplorerError::AlreadyExists(
+            dst.to_string_lossy().to_string(),
+        ));
     }
 
     if let Some(parent) = dst.parent() {
@@ -318,7 +334,9 @@ pub fn rename_path(src: &PathBuf, new_name: &str) -> Result<(), FileExplorerErro
     let dst = parent.join(new_name);
 
     if dst.exists() {
-        return Err(FileExplorerError::AlreadyExists(dst.to_string_lossy().to_string()));
+        return Err(FileExplorerError::AlreadyExists(
+            dst.to_string_lossy().to_string(),
+        ));
     }
 
     std::fs::rename(src, dst)?;
@@ -385,7 +403,9 @@ pub fn delete_path(path: &PathBuf) -> Result<(), FileExplorerError> {
     log::info!("[file-explorer] deleting path: {}", path.display());
 
     if !path.exists() {
-        return Err(FileExplorerError::NotFound(path.to_string_lossy().to_string()));
+        return Err(FileExplorerError::NotFound(
+            path.to_string_lossy().to_string(),
+        ));
     }
 
     if path.is_file() {

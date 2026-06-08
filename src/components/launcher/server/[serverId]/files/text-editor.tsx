@@ -229,4 +229,3 @@ function TextEditor({ filePath, fileName, isOpen, onClose, onSave }: TextEditorP
 }
 
 export { TextEditor };
-

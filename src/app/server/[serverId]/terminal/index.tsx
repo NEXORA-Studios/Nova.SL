@@ -6,7 +6,17 @@ import "@xterm/xterm/css/xterm.css";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { PlayIcon, SquareIcon, SkullIcon, ServerIcon, Trash2Icon, CopyIcon, SendIcon, TerminalIcon, MessageSquareTextIcon } from "lucide-react";
+import {
+    PlayIcon,
+    SquareIcon,
+    SkullIcon,
+    ServerIcon,
+    Trash2Icon,
+    CopyIcon,
+    SendIcon,
+    TerminalIcon,
+    MessageSquareTextIcon,
+} from "lucide-react";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { useConfigStore } from "@/stores/config";
 import { useServerStore } from "@/stores/server";
@@ -18,7 +28,7 @@ import {
     getInstanceStatus,
     getInstanceLogs,
 } from "@/lib/tauri/instance-process";
-import { cn } from "@/lib/utils";
+import { cn } from "@/utils/utils";
 
 export type ServerStatusLocal = "running" | "stopped" | "starting" | "stopping" | "crashed";
 
@@ -128,30 +138,34 @@ function TerminalPage() {
         let unlisten: UnlistenFn;
 
         // 先加载历史日志
-        getInstanceLogs(serverId).then((logs) => {
-            if (logs.length > 0) {
-                term.writeln(`${prefix.novasl} \x1b[90m--- 历史日志 ---\x1b[0m`);
-                logs.forEach((entry) => {
-                    const color = entry.stream === "stderr" ? "\x1b[91m" : entry.stream === "stdin" ? "\x1b[96m" : "\x1b[92m";
-                    const line = `${color}${`[${entry.stream.toUpperCase()}]`.padEnd(9, " ")}\x1b[90m|\x1b[0m ${entry.line}`;
+        getInstanceLogs(serverId)
+            .then((logs) => {
+                if (logs.length > 0) {
+                    term.writeln(`${prefix.novasl} \x1b[90m--- 历史日志 ---\x1b[0m`);
+                    logs.forEach((entry) => {
+                        const color =
+                            entry.stream === "stderr" ? "\x1b[91m" : entry.stream === "stdin" ? "\x1b[96m" : "\x1b[92m";
+                        const line = `${color}${`[${entry.stream.toUpperCase()}]`.padEnd(9, " ")}\x1b[90m|\x1b[0m ${entry.line}`;
+                        term.writeln(line);
+                    });
+                    term.writeln(`${prefix.novasl} \x1b[90m--- 实时输出 ---\x1b[0m`);
+                }
+            })
+            .catch((err) => {
+                console.error("Failed to load logs:", err);
+            })
+            .finally(() => {
+                // 然后开始监听实时输出
+                listen<{ stream: string; line: string }>(eventName, (event) => {
+                    const term = xtermRef.current;
+                    if (!term) return;
+                    const line = `${prefix.server} ${event.payload.line}`;
                     term.writeln(line);
+                }).then((u) => {
+                    unlisten = u;
+                    unlistenRef.current = u;
                 });
-                term.writeln(`${prefix.novasl} \x1b[90m--- 实时输出 ---\x1b[0m`);
-            }
-        }).catch((err) => {
-            console.error("Failed to load logs:", err);
-        }).finally(() => {
-            // 然后开始监听实时输出
-            listen<{ stream: string; line: string }>(eventName, (event) => {
-                const term = xtermRef.current;
-                if (!term) return;
-                const line = `${prefix.server} ${event.payload.line}`;
-                term.writeln(line);
-            }).then((u) => {
-                unlisten = u;
-                unlistenRef.current = u;
             });
-        });
 
         return () => {
             if (unlisten) unlisten();
@@ -364,8 +378,8 @@ function TerminalPage() {
                         placeholder={
                             isRunning
                                 ? ctrlEnterToSend
-                                    ? "输入命令... (Ctrl+Enter 发送)"
-                                    : "输入命令... (Enter 发送)"
+                                    ? `输入${isCommandMode ? "命令" : "消息"}... (Ctrl+Enter 发送)`
+                                    : `输入${isCommandMode ? "命令" : "消息"}... (Enter 发送)`
                                 : "服务器未运行"
                         }
                         disabled={!isRunning}
@@ -385,4 +399,3 @@ function TerminalPage() {
 }
 
 export default TerminalPage;
-

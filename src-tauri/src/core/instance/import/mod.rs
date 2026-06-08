@@ -121,7 +121,12 @@ fn parse_launch_script(content: &str, ext: &str) -> (Option<String>, Vec<String>
 
     for line in content.lines() {
         let trimmed = line.trim();
-        if trimmed.is_empty() || trimmed.starts_with("#") || trimmed.starts_with("::") || trimmed.starts_with("@echo") || trimmed.starts_with("REM") {
+        if trimmed.is_empty()
+            || trimmed.starts_with("#")
+            || trimmed.starts_with("::")
+            || trimmed.starts_with("@echo")
+            || trimmed.starts_with("REM")
+        {
             continue;
         }
 
@@ -157,12 +162,18 @@ fn parse_launch_script(content: &str, ext: &str) -> (Option<String>, Vec<String>
 }
 
 /// 通过 jar 文件识别服务器核心类型
-fn detect_loader_by_jar(instance_path: &PathBuf, server_jar: Option<&str>) -> (ServerLoader, Option<String>) {
+fn detect_loader_by_jar(
+    instance_path: &PathBuf,
+    server_jar: Option<&str>,
+) -> (ServerLoader, Option<String>) {
     // 1. 优先使用启动脚本中的 jar
     if let Some(jar_name) = server_jar {
         let jar_path = instance_path.join(jar_name);
         if jar_path.exists() {
-            return (identify_jar_loader(&jar_name.to_lowercase()), extract_version_from_jar(&jar_name));
+            return (
+                identify_jar_loader(&jar_name.to_lowercase()),
+                extract_version_from_jar(&jar_name),
+            );
         }
     }
 
@@ -177,7 +188,10 @@ fn detect_loader_by_jar(instance_path: &PathBuf, server_jar: Option<&str>) -> (S
             if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
                 let lower = name.to_lowercase();
                 if lower.ends_with(".jar") {
-                    return (identify_jar_loader(&lower), extract_version_from_jar(&lower));
+                    return (
+                        identify_jar_loader(&lower),
+                        extract_version_from_jar(&lower),
+                    );
                 }
             }
         }
@@ -268,7 +282,10 @@ pub fn analyze_server_directory(instance_path: &PathBuf) -> Result<ImportAnalysi
         .unwrap_or("Unknown")
         .to_string();
 
-    log::info!("[server-import] analyzing directory: {}", instance_path.display());
+    log::info!(
+        "[server-import] analyzing directory: {}",
+        instance_path.display()
+    );
 
     // 1. 检测启动脚本
     let launch_script = detect_launch_script(instance_path);
@@ -280,7 +297,11 @@ pub fn analyze_server_directory(instance_path: &PathBuf) -> Result<ImportAnalysi
     // 2. 识别核心类型和版本
     let server_jar = launch_script.as_ref().and_then(|s| s.server_jar.clone());
     let (loader, version) = detect_loader_by_jar(instance_path, server_jar.as_deref());
-    log::info!("[server-import] detected loader: {:?}, version: {:?}", loader, version);
+    log::info!(
+        "[server-import] detected loader: {:?}, version: {:?}",
+        loader,
+        version
+    );
 
     // 3. 检测模组类型
     let mod_type = detect_mod_type(instance_path, &loader);

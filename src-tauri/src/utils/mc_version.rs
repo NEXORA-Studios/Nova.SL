@@ -68,4 +68,3 @@ pub fn parse_mc_version(input: &str) -> McVersion {
         snapshot_week: None,
     }
 }
-

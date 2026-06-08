@@ -35,9 +35,7 @@ export const useJavaStore = create<JavaState>((set, get) => ({
         await updateJavaEnabled(path, enabled);
         const { config } = get();
         if (!config) return;
-        const instances = config.instances.map((j) =>
-            j.path === path ? { ...j, enabled } : j
-        );
+        const instances = config.instances.map((j) => (j.path === path ? { ...j, enabled } : j));
         set({ config: { ...config, instances } });
     },
 
@@ -58,11 +56,7 @@ export const useJavaStore = create<JavaState>((set, get) => ({
         }
         if (config.instances.some((j) => j.path === entry.path)) return;
         const instances = [...config.instances, entry];
-        instances.sort(
-            (a, b) =>
-                (b.major_version ?? 0) - (a.major_version ?? 0) ||
-                a.path.localeCompare(b.path)
-        );
+        instances.sort((a, b) => (b.major_version ?? 0) - (a.major_version ?? 0) || a.path.localeCompare(b.path));
         set({ config: { ...config, instances } });
     },
 
@@ -88,11 +82,7 @@ export const useJavaStore = create<JavaState>((set, get) => ({
                 })),
         ];
 
-        merged.sort(
-            (a, b) =>
-                (b.major_version ?? 0) - (a.major_version ?? 0) ||
-                a.path.localeCompare(b.path)
-        );
+        merged.sort((a, b) => (b.major_version ?? 0) - (a.major_version ?? 0) || a.path.localeCompare(b.path));
 
         set({ config: { instances: merged } });
     },

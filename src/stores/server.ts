@@ -37,9 +37,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
 
     updateInstance(id, patch) {
         set((state) => ({
-            instances: state.instances.map((inst) =>
-                inst.id === id ? { ...inst, ...patch } : inst
-            ),
+            instances: state.instances.map((inst) => (inst.id === id ? { ...inst, ...patch } : inst)),
         }));
     },
 

@@ -41,7 +41,9 @@ pub fn cpu_info() -> CpuInfo {
     CpuInfo {
         usage,
         core_count: cores.len(),
-        brand: first_core.map(|c| c.brand().to_string()).unwrap_or_default(),
+        brand: first_core
+            .map(|c| c.brand().to_string())
+            .unwrap_or_default(),
         frequency: first_core.map(|c| c.frequency()).unwrap_or(0),
     }
 }
@@ -78,14 +80,22 @@ pub fn system_info() -> SystemInfo {
         cpu: CpuInfo {
             usage: sys.global_cpu_usage(),
             core_count: sys.cpus().len(),
-            brand: sys.cpus().first().map(|c| c.brand().to_string()).unwrap_or_default(),
+            brand: sys
+                .cpus()
+                .first()
+                .map(|c| c.brand().to_string())
+                .unwrap_or_default(),
             frequency: sys.cpus().first().map(|c| c.frequency()).unwrap_or(0),
         },
         memory: MemoryInfo {
             total,
             used,
             available: sys.available_memory(),
-            usage_percent: if total > 0 { (used as f32 / total as f32) * 100.0 } else { 0.0 },
+            usage_percent: if total > 0 {
+                (used as f32 / total as f32) * 100.0
+            } else {
+                0.0
+            },
         },
         hostname: System::host_name().unwrap_or_default(),
         os_name: System::name().unwrap_or_default(),

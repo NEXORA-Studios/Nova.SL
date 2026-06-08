@@ -128,21 +128,13 @@ function ServerInstanceSettings() {
                             此操作不可撤销。
                         </AlertDialogDescription>
                     </AlertDialogHeader>
-                    <AlertDialogFooter className="flex-col sm:flex-row gap-2">
-                        <AlertDialogCancel onClick={() => setDeleteDialogOpen(false)}>
-                            取消
-                        </AlertDialogCancel>
-                        <Button
-                            variant="outline"
-                            className="gap-1.5"
-                            onClick={handleRemoveFromApp}>
+                    <AlertDialogFooter className="flex-col gap-2 sm:flex-row">
+                        <AlertDialogCancel onClick={() => setDeleteDialogOpen(false)}>取消</AlertDialogCancel>
+                        <Button variant="outline" className="gap-1.5" onClick={handleRemoveFromApp}>
                             <UnlinkIcon className="size-4" />
                             仅从应用移除
                         </Button>
-                        <Button
-                            variant="destructive"
-                            className="gap-1.5"
-                            onClick={handleDeleteFromDisk}>
+                        <Button variant="destructive" className="gap-1.5" onClick={handleDeleteFromDisk}>
                             <HardDriveIcon className="size-4" />
                             从磁盘删除文件
                         </Button>

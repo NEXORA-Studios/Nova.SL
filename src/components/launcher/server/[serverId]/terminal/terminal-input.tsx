@@ -1,5 +1,5 @@
 import { KeyboardEvent, useRef, useState } from "react";
-import { cn } from "@/lib/utils";
+import { cn } from "@/utils/utils";
 import { ChevronRightIcon } from "lucide-react";
 
 interface TerminalInputProps {
@@ -67,4 +67,3 @@ function TerminalInput({ onSubmit, placeholder = "输入命令...", className }:
 }
 
 export { TerminalInput };
-

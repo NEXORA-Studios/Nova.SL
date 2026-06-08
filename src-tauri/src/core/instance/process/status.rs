@@ -8,6 +8,7 @@ pub enum ProcessStatus {
     Stopping,
     Stopped,
     Crashed,
+    Unknown,
 }
 
 impl ToString for ProcessStatus {
@@ -18,6 +19,7 @@ impl ToString for ProcessStatus {
             ProcessStatus::Stopping => "stopping".to_string(),
             ProcessStatus::Stopped => "stopped".to_string(),
             ProcessStatus::Crashed => "crashed".to_string(),
+            ProcessStatus::Unknown => "unknown".to_string(),
         }
     }
 }

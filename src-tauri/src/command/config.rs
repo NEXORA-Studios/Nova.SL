@@ -11,7 +11,10 @@ pub struct ConfigState {
 pub fn get_config(state: State<'_, ConfigState>) -> AppConfig {
     log::info!("[command] get_config");
     let config = state.config.lock().unwrap().clone();
-    log::debug!("[command] get_config: {} instances", config.server.instances.len());
+    log::debug!(
+        "[command] get_config: {} instances",
+        config.server.instances.len()
+    );
     config
 }
 
@@ -21,7 +24,10 @@ pub fn update_config(
     state: State<'_, ConfigState>,
     config: AppConfig,
 ) -> Result<(), String> {
-    log::info!("[command] update_config: {} instances", config.server.instances.len());
+    log::info!(
+        "[command] update_config: {} instances",
+        config.server.instances.len()
+    );
     config::save(&app, &config).map_err(|e| {
         log::error!("[command] update_config failed: {:?}", e);
         format!("{:?}", e)

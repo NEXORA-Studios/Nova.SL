@@ -16,6 +16,26 @@
     --color-log-warn-border: var(--log-warn-border);
     --color-log-error-border: var(--log-error-border);
     --color-log-fatal-border: var(--log-fatal-border);
+
+    /* Platform colors */
+    --color-platform-fabric: var(--platform-fabric);
+    --color-platform-quilt: var(--platform-quilt);
+    --color-platform-forge: var(--platform-forge);
+    --color-platform-neoforge: var(--platform-neoforge);
+    --color-platform-liteloader: var(--platform-liteloader);
+    --color-platform-bukkit: var(--platform-bukkit);
+    --color-platform-bungeecord: var(--platform-bungeecord);
+    --color-platform-folia: var(--platform-folia);
+    --color-platform-paper: var(--platform-paper);
+    --color-platform-purpur: var(--platform-purpur);
+    --color-platform-spigot: var(--platform-spigot);
+    --color-platform-velocity: var(--platform-velocity);
+    --color-platform-waterfall: var(--platform-waterfall);
+    --color-platform-sponge: var(--platform-sponge);
+    --color-platform-geyser: var(--platform-geyser);
+    --color-platform-ornithe: var(--platform-ornithe);
+    --color-platform-bta-babric: var(--platform-bta-babric);
+    --color-platform-nilloader: var(--platform-nilloader);
 }
 
 :root {
@@ -37,6 +57,26 @@
     --log-warn-border: oklch(0.82 0.07 92);
     --log-error-border: oklch(0.75 0.09 28);
     --log-fatal-border: oklch(0.68 0.1 18);
+
+    /* Platform colors */
+    --platform-fabric: #dbb69b;
+    --platform-quilt: #c796f9;
+    --platform-forge: #959eef;
+    --platform-neoforge: #f99e6b;
+    --platform-liteloader: #7ab0ee;
+    --platform-bukkit: #f6af7b;
+    --platform-bungeecord: #d2c080;
+    --platform-folia: #a5e388;
+    --platform-paper: #eaa;
+    --platform-purpur: #c3abf7;
+    --platform-spigot: #f1cc84;
+    --platform-velocity: #83d5ef;
+    --platform-waterfall: #78a4fb;
+    --platform-sponge: #f9e580;
+    --platform-geyser: #5ec6c8;
+    --platform-ornithe: #87c7ff;
+    --platform-bta-babric: #72cc4a;
+    --platform-nilloader: #f45e9a;
 }
 
 .dark {

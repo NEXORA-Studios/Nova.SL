@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { cn } from "@/lib/utils";
+import { cn } from "@/utils/utils";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
@@ -242,4 +242,3 @@ function NbtViewer({ filePath, fileName, isOpen, onClose }: NbtViewerProps) {
 }
 
 export { NbtViewer };
-

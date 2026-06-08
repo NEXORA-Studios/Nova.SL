@@ -137,9 +137,9 @@ fn decompress(data: &[u8], compression: &CompressionType) -> Result<Vec<u8>, Nbt
 
             let mut decoder = GzDecoder::new(data);
             let mut result = Vec::new();
-            decoder
-                .read_to_end(&mut result)
-                .map_err(|e| NbtError::DecompressError(format!("Gzip decompression error: {}", e)))?;
+            decoder.read_to_end(&mut result).map_err(|e| {
+                NbtError::DecompressError(format!("Gzip decompression error: {}", e))
+            })?;
             Ok(result)
         }
         CompressionType::Zlib => {
@@ -148,9 +148,9 @@ fn decompress(data: &[u8], compression: &CompressionType) -> Result<Vec<u8>, Nbt
 
             let mut decoder = ZlibDecoder::new(data);
             let mut result = Vec::new();
-            decoder
-                .read_to_end(&mut result)
-                .map_err(|e| NbtError::DecompressError(format!("Zlib decompression error: {}", e)))?;
+            decoder.read_to_end(&mut result).map_err(|e| {
+                NbtError::DecompressError(format!("Zlib decompression error: {}", e))
+            })?;
             Ok(result)
         }
     }
@@ -235,10 +235,7 @@ fn value_to_node(name: &str, value: &Value) -> NbtNode {
             }
         }
         Value::Compound(map) => {
-            let children: Vec<NbtNode> = map
-                .iter()
-                .map(|(k, v)| value_to_node(k, v))
-                .collect();
+            let children: Vec<NbtNode> = map.iter().map(|(k, v)| value_to_node(k, v)).collect();
             NbtNode {
                 name: name.to_string(),
                 node_type,

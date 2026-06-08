@@ -75,9 +75,77 @@ pub struct ServerConfig {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CacheConfig {
+    #[serde(default = "default_ttl_search")]
+    pub search: u64,
+    #[serde(default = "default_ttl_project")]
+    pub project: u64,
+    #[serde(default = "default_ttl_project_versions")]
+    pub project_versions: u64,
+    #[serde(default = "default_ttl_version")]
+    pub version: u64,
+    #[serde(default = "default_ttl_version_from_hash")]
+    pub version_from_hash: u64,
+    #[serde(default = "default_ttl_versions")]
+    pub versions: u64,
+    #[serde(default = "default_ttl_categories")]
+    pub categories: u64,
+    #[serde(default = "default_ttl_loaders")]
+    pub loaders: u64,
+    #[serde(default = "default_ttl_game_versions")]
+    pub game_versions: u64,
+}
+
+impl Default for CacheConfig {
+    fn default() -> Self {
+        Self {
+            search: default_ttl_search(),
+            project: default_ttl_project(),
+            project_versions: default_ttl_project_versions(),
+            version: default_ttl_version(),
+            version_from_hash: default_ttl_version_from_hash(),
+            versions: default_ttl_versions(),
+            categories: default_ttl_categories(),
+            loaders: default_ttl_loaders(),
+            game_versions: default_ttl_game_versions(),
+        }
+    }
+}
+
+fn default_ttl_search() -> u64 {
+    300
+}
+fn default_ttl_project() -> u64 {
+    600
+}
+fn default_ttl_project_versions() -> u64 {
+    300
+}
+fn default_ttl_version() -> u64 {
+    600
+}
+fn default_ttl_version_from_hash() -> u64 {
+    600
+}
+fn default_ttl_versions() -> u64 {
+    300
+}
+fn default_ttl_categories() -> u64 {
+    86400
+}
+fn default_ttl_loaders() -> u64 {
+    86400
+}
+fn default_ttl_game_versions() -> u64 {
+    86400
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppConfig {
     pub ui: UiConfig,
     pub server: ServerConfig,
+    #[serde(default)]
+    pub modrinth_cache: CacheConfig,
 }
 
 impl Default for AppConfig {
@@ -93,6 +161,7 @@ impl Default for AppConfig {
             server: ServerConfig {
                 instances: Vec::new(),
             },
+            modrinth_cache: CacheConfig::default(),
         }
     }
 }
@@ -123,7 +192,10 @@ pub fn load(app: &AppHandle) -> Result<AppConfig, AppConfigError> {
 
     let content = fs::read_to_string(&path)?;
     let config = toml::from_str::<AppConfig>(&content)?;
-    log::info!("[config] App.toml loaded, {} instances", config.server.instances.len());
+    log::info!(
+        "[config] App.toml loaded, {} instances",
+        config.server.instances.len()
+    );
     Ok(config)
 }
 

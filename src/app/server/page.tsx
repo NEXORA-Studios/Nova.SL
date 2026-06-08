@@ -20,9 +20,7 @@ const statusMap: Record<
 };
 
 // 将 config 中的实例转换为运行时 server store 数据
-function buildInstancesFromConfig(
-    instances: { id: string; name: string; path: string }[]
-): ServerInstance[] {
+function buildInstancesFromConfig(instances: { id: string; name: string; path: string }[]): ServerInstance[] {
     return instances.map((inst) => ({
         id: inst.id,
         name: inst.name,
@@ -181,7 +179,11 @@ function Dashboard() {
                                             </span>
                                         </div>
                                         <Button variant="ghost" size="icon-sm" asChild>
-                                            <Link to={`/server/instance/${server.id}/terminal`} state={{ path: config?.server.instances.find((i) => i.id === server.id)?.path }}>
+                                            <Link
+                                                to={`/server/instance/${server.id}/terminal`}
+                                                state={{
+                                                    path: config?.server.instances.find((i) => i.id === server.id)?.path,
+                                                }}>
                                                 <ArrowRightIcon className="size-3.5" />
                                             </Link>
                                         </Button>
@@ -197,4 +199,3 @@ function Dashboard() {
 }
 
 export default Dashboard;
-

@@ -1,3 +1,5 @@
+pub mod base;
+pub mod modrinth;
 pub mod plugin;
 pub mod plugins;
 

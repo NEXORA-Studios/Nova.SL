@@ -3,7 +3,7 @@
 import * as React from "react";
 import { Select as SelectPrimitive } from "radix-ui";
 
-import { cn } from "@/lib/utils";
+import { cn } from "@/utils/utils";
 import { ChevronDownIcon, CheckIcon, ChevronUpIcon } from "lucide-react";
 
 function Select({ ...props }: React.ComponentProps<typeof SelectPrimitive.Root>) {
@@ -37,7 +37,7 @@ function SelectTrigger({
             {...props}>
             {children}
             <SelectPrimitive.Icon asChild>
-                <ChevronDownIcon className="ml-auto pointer-events-none size-4 text-muted-foreground" />
+                <ChevronDownIcon className="pointer-events-none ml-auto size-4 text-muted-foreground" />
             </SelectPrimitive.Icon>
         </SelectPrimitive.Trigger>
     );

@@ -14,12 +14,7 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useJavaStore } from "@/stores/java";
-import {
-    scanJavaInstallations,
-    onJavaScanEvent,
-    getCachedJavas,
-    type JavaInstallation,
-} from "@/lib/tauri";
+import { scanJavaInstallations, onJavaScanEvent, getCachedJavas, type JavaInstallation } from "@/lib/tauri";
 import { CoffeeIcon, Trash2Icon, RefreshCwIcon, PlusIcon, FolderOpenIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
@@ -110,10 +105,7 @@ function JavaSettings() {
         setDeletePath(null);
     };
 
-    const progressPercent =
-        scanProgress.total > 0
-            ? Math.round((scanProgress.current / scanProgress.total) * 100)
-            : 0;
+    const progressPercent = scanProgress.total > 0 ? Math.round((scanProgress.current / scanProgress.total) * 100) : 0;
 
     const instances = javaConfig?.instances ?? [];
 
@@ -126,24 +118,12 @@ function JavaSettings() {
                         <CardTitle>Java 运行时</CardTitle>
                     </div>
                     <div className="flex items-center gap-2">
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={handleAddManual}
-                            disabled={scanning}>
+                        <Button variant="outline" size="sm" onClick={handleAddManual} disabled={scanning}>
                             <PlusIcon className="mr-1 size-4" />
                             手动添加
                         </Button>
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={handleScan}
-                            disabled={scanning}>
-                            <RefreshCwIcon
-                                className={
-                                    "mr-1 size-4 " + (scanning ? "animate-spin" : "")
-                                }
-                            />
+                        <Button variant="outline" size="sm" onClick={handleScan} disabled={scanning}>
+                            <RefreshCwIcon className={"mr-1 size-4 " + (scanning ? "animate-spin" : "")} />
                             {scanning ? "扫描中..." : "自动扫描"}
                         </Button>
                     </div>
@@ -164,16 +144,12 @@ function JavaSettings() {
                             </span>
                         </div>
                         {foundDuringScan.length > 0 && (
-                            <p className="text-xs text-primary">
-                                已找到 {foundDuringScan.length} 个 Java...
-                            </p>
+                            <p className="text-xs text-primary">已找到 {foundDuringScan.length} 个 Java...</p>
                         )}
                     </div>
                 )}
 
-                {!scanning && scanStatus && (
-                    <p className="text-xs text-muted-foreground">{scanStatus}</p>
-                )}
+                {!scanning && scanStatus && <p className="text-xs text-muted-foreground">{scanStatus}</p>}
 
                 {instances.length === 0 ? (
                     <div className="py-8 text-center">
@@ -198,19 +174,11 @@ function JavaSettings() {
                                     }>
                                     <div className="min-w-0 flex-1 space-y-0.5">
                                         <div className="flex items-center gap-2">
-                                            <p className="truncate text-sm font-medium">
-                                                Java {java.major_version}
-                                            </p>
-                                            {java.vendor && (
-                                                <Badge variant="default">{java.vendor}</Badge>
-                                            )}
-                                            {java.manual && (
-                                                <Badge variant="outline">手动导入</Badge>
-                                            )}
+                                            <p className="truncate text-sm font-medium">Java {java.major_version}</p>
+                                            {java.vendor && <Badge variant="default">{java.vendor}</Badge>}
+                                            {java.manual && <Badge variant="outline">手动导入</Badge>}
                                         </div>
-                                        <p className="text-xs text-muted-foreground">
-                                            {java.version}
-                                        </p>
+                                        <p className="text-xs text-muted-foreground">{java.version}</p>
                                         <p className="flex items-center gap-1 truncate text-xs text-muted-foreground">
                                             <FolderOpenIcon className="size-3 shrink-0" />
                                             <span className="truncate">{java.path}</span>
@@ -220,9 +188,7 @@ function JavaSettings() {
                                         <div className="flex items-center gap-1.5">
                                             <Switch
                                                 checked={entryEnabled}
-                                                onCheckedChange={(v) =>
-                                                    setJavaEnabled(java.path, v)
-                                                }
+                                                onCheckedChange={(v) => setJavaEnabled(java.path, v)}
                                                 id={`java-enabled-${index}`}
                                             />
                                             <label
@@ -258,16 +224,14 @@ function JavaSettings() {
                         <AlertDialogDescription>
                             确定要删除这个 Java 运行时吗？此操作不可恢复。
                             <br />
-                            <code className="mt-1 block truncate rounded bg-muted px-1 py-0.5 text-xs">
-                                {deletePath}
-                            </code>
+                            <code className="mt-1 block truncate rounded bg-muted px-1 py-0.5 text-xs">{deletePath}</code>
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel>取消</AlertDialogCancel>
                         <AlertDialogAction
                             onClick={doDelete}
-                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                            className="text-destructive-foreground bg-destructive hover:bg-destructive/90">
                             删除
                         </AlertDialogAction>
                     </AlertDialogFooter>

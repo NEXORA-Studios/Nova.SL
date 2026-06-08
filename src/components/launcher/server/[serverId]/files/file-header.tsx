@@ -1,4 +1,4 @@
-import { cn } from "@/lib/utils";
+import { cn } from "@/utils/utils";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ChevronLeftIcon, FolderPlusIcon, FilePlusIcon, HomeIcon } from "lucide-react";
@@ -27,12 +27,8 @@ function FileHeader({
     const canGoBack = pathComponents.length > 0;
 
     return (
-        <div
-            className={cn(
-                "flex items-center justify-between border-b border-border bg-card px-4 py-2",
-                className
-            )}>
-            <div className="flex items-center gap-2 min-w-0">
+        <div className={cn("flex items-center justify-between border-b border-border bg-card px-4 py-2", className)}>
+            <div className="flex min-w-0 items-center gap-2">
                 <Tooltip>
                     <TooltipTrigger asChild>
                         <Button variant="ghost" size="icon-sm" onClick={onBack} disabled={!canGoBack}>
@@ -42,23 +38,19 @@ function FileHeader({
                     <TooltipContent>返回上级</TooltipContent>
                 </Tooltip>
 
-                <div className="flex items-center gap-1 text-xs text-muted-foreground min-w-0 overflow-hidden">
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 px-1 text-xs"
-                        onClick={onNavigateRoot}>
-                        <HomeIcon className="size-3.5 mr-1" />
+                <div className="flex min-w-0 items-center gap-1 overflow-hidden text-xs text-muted-foreground">
+                    <Button variant="ghost" size="sm" className="h-6 px-1 text-xs" onClick={onNavigateRoot}>
+                        <HomeIcon className="mr-1 size-3.5" />
                         根目录
                     </Button>
 
                     {pathComponents.map((component, index) => (
-                        <div key={index} className="flex items-center shrink-0">
+                        <div key={index} className="flex shrink-0 items-center">
                             <span className="mx-1">/</span>
                             <Button
                                 variant="ghost"
                                 size="sm"
-                                className="h-6 px-1 text-xs truncate max-w-30"
+                                className="h-6 max-w-30 truncate px-1 text-xs"
                                 onClick={() => onNavigateTo?.(index)}>
                                 {component}
                             </Button>
@@ -67,7 +59,7 @@ function FileHeader({
                 </div>
             </div>
 
-            <div className="flex items-center gap-1 shrink-0">
+            <div className="flex shrink-0 items-center gap-1">
                 <Tooltip>
                     <TooltipTrigger asChild>
                         <Button variant="ghost" size="icon-sm" onClick={onNewFolder}>

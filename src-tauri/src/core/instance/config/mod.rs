@@ -35,7 +35,10 @@ pub fn instance_config_path(instance_dir: &PathBuf) -> PathBuf {
 
 pub fn load_instance_config(instance_dir: &PathBuf) -> Result<InstanceConfig, InstanceConfigError> {
     let path = instance_config_path(instance_dir);
-    log::info!("[instance-config] loading Instance.toml from: {}", path.display());
+    log::info!(
+        "[instance-config] loading Instance.toml from: {}",
+        path.display()
+    );
 
     if !path.exists() {
         log::info!("[instance-config] Instance.toml not found, creating default");
@@ -46,7 +49,11 @@ pub fn load_instance_config(instance_dir: &PathBuf) -> Result<InstanceConfig, In
 
     let content = fs::read_to_string(&path)?;
     let config = toml::from_str::<InstanceConfig>(&content)?;
-    log::info!("[instance-config] Instance.toml loaded: id={}, name={}", config.instance.id, config.instance.name);
+    log::info!(
+        "[instance-config] Instance.toml loaded: id={}, name={}",
+        config.instance.id,
+        config.instance.name
+    );
     Ok(config)
 }
 
@@ -59,7 +66,10 @@ pub fn save_instance_config(
 
     let content = toml::to_string_pretty(config)?;
     fs::write(instance_config_path(instance_dir), &content)?;
-    log::info!("[instance-config] Instance.toml saved to: {}", instance_config_path(instance_dir).display());
+    log::info!(
+        "[instance-config] Instance.toml saved to: {}",
+        instance_config_path(instance_dir).display()
+    );
     Ok(())
 }
 
@@ -113,9 +123,14 @@ pub fn extensions_config_path(instance_dir: &PathBuf) -> PathBuf {
     instance_dir.join(".nova").join("Extensions.toml")
 }
 
-pub fn load_extensions_config(instance_dir: &PathBuf) -> Result<ExtensionsConfig, InstanceConfigError> {
+pub fn load_extensions_config(
+    instance_dir: &PathBuf,
+) -> Result<ExtensionsConfig, InstanceConfigError> {
     let path = extensions_config_path(instance_dir);
-    log::info!("[instance-config] loading Extensions.toml from: {}", path.display());
+    log::info!(
+        "[instance-config] loading Extensions.toml from: {}",
+        path.display()
+    );
 
     if !path.exists() {
         log::info!("[instance-config] Extensions.toml not found, creating default");
@@ -126,7 +141,11 @@ pub fn load_extensions_config(instance_dir: &PathBuf) -> Result<ExtensionsConfig
 
     let content = fs::read_to_string(&path)?;
     let config = toml::from_str::<ExtensionsConfig>(&content)?;
-    log::info!("[instance-config] Extensions.toml loaded: {} mods, {} plugins", config.r#mod.len(), config.plugin.len());
+    log::info!(
+        "[instance-config] Extensions.toml loaded: {} mods, {} plugins",
+        config.r#mod.len(),
+        config.plugin.len()
+    );
     Ok(config)
 }
 
@@ -210,9 +229,7 @@ impl Default for LaunchConfig {
                 gc: None,
                 extra_args: Vec::new(),
             },
-            game_props: GameProps {
-                nogui: true,
-            },
+            game_props: GameProps { nogui: true },
         }
     }
 }
@@ -223,7 +240,10 @@ pub fn launch_config_path(instance_dir: &PathBuf) -> PathBuf {
 
 pub fn load_launch_config(instance_dir: &PathBuf) -> Result<LaunchConfig, InstanceConfigError> {
     let path = launch_config_path(instance_dir);
-    log::info!("[instance-config] loading Launch.toml from: {}", path.display());
+    log::info!(
+        "[instance-config] loading Launch.toml from: {}",
+        path.display()
+    );
 
     if !path.exists() {
         log::info!("[instance-config] Launch.toml not found, creating default");
@@ -236,7 +256,10 @@ pub fn load_launch_config(instance_dir: &PathBuf) -> Result<LaunchConfig, Instan
     let config = toml::from_str::<LaunchConfig>(&content)?;
     log::info!(
         "[instance-config] Launch.toml loaded: method={}, jar={}, mem={}/{}",
-        config.basic.launch_method, config.basic.server_jar, config.jvm_args.min_memory, config.jvm_args.max_memory
+        config.basic.launch_method,
+        config.basic.server_jar,
+        config.jvm_args.min_memory,
+        config.jvm_args.max_memory
     );
     Ok(config)
 }
